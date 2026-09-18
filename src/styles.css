@@ -149,6 +149,46 @@ kbd { margin-left: auto; border: 1px solid #e5e7eb; border-radius: 4px; color: #
 .positive { color: #13814e !important; }
 .negative { color: #c62429 !important; }
 
+/* LIQ-7: forked status treatment — squared .chip vs Core's pill .status */
+.chip {
+  display: inline-flex;
+  margin-left: 8px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  vertical-align: middle;
+}
+.chip-ok { background: #e8f5ee; color: #0f6b3f; }
+.chip-warn { background: #fff4d6; color: #8a5b00; }
+.chip-bad { background: #fde8e8; color: #c62429; }
+
+.deep-link-miss {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  align-items: center;
+  margin: 0 0 18px;
+  padding: 14px 16px;
+  border: 1px solid #f5c2c0;
+  border-radius: 12px;
+  background: #fff7f7;
+  color: #5f2120;
+}
+.deep-link-miss strong { font-weight: 650; }
+.deep-link-miss span { flex: 1 1 220px; font-size: 14px; }
+.deep-link-miss .text-button {
+  border: 0;
+  background: transparent;
+  color: #d42126;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
 @media (max-width: 900px) {
   .mobile-section-nav { display: flex; }
   .reporting-content { padding: 29px 24px 55px; }

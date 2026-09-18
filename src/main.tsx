@@ -23,12 +23,16 @@ import {
   TrendingUp,
   Users,
 } from "lucide-react";
+import { PostHogProvider } from "@posthog/react";
+import { captureProductEvent, createPosthogClient } from "./analytics";
 import liquidLogo from "./media/liquid-logo.png";
 import liquidMark from "./media/liquid-mark.png";
 import "./styles.css";
 
+const posthogClient = createPosthogClient("reporting");
+
 type Section = "all" | "performance" | "statements";
-type PerformanceReport = "Profit & Loss" | "Cash flow" | "Sales summary";
+type PerformanceReport = "Profit & Loss" | "Cash flow" | "Revenue summary";
 type StatementReport = "Balance sheet" | "Trial balance";
 type Organisation = { id: string; name: string; role: string };
 type ProfitAndLoss = { netProfit: number };
@@ -38,6 +42,8 @@ type TableRow = {
   right: string;
   net: string;
   tone?: "positive" | "negative";
+  chip?: string;
+  chipTone?: "ok" | "warn" | "bad";
 };
 
 const defaultCoreAppUrl = "http://localhost:3000";
@@ -127,8 +133,8 @@ const performanceReports: Record<PerformanceReport, FlowReport> = {
       { account: "Closing cash", left: "$51,392.00", right: "—", net: "$51,392.00", tone: "positive" },
     ],
   },
-  "Sales summary": {
-    title: "Sales summary",
+  "Revenue summary": {
+    title: "Revenue summary",
     subtitle: "See which customers and invoices are driving revenue.",
     total: "$104,390.00",
     delta: "22.1% up on the previous period",
@@ -142,12 +148,12 @@ const performanceReports: Record<PerformanceReport, FlowReport> = {
     headline: "Invoiced this period",
     chartTitle: "Invoiced and paid",
     rows: [
-      { account: "Hamilton Studio", left: "$38,880.00", right: "$32,400.00", net: "$6,480.00" },
-      { account: "Northline Architecture", left: "$36,720.00", right: "$31,310.00", net: "$5,410.00" },
-      { account: "Aster Coffee Roasters", left: "$28,790.00", right: "$26,915.00", net: "$1,875.00" },
+      { account: "Hamilton Studio", left: "$38,880.00", right: "$32,400.00", net: "$6,480.00", chip: "Open", chipTone: "warn" },
+      { account: "Northline Architecture", left: "$36,720.00", right: "$31,310.00", net: "$5,410.00", chip: "Overdue", chipTone: "bad" },
+      { account: "Aster Coffee Roasters", left: "$28,790.00", right: "$26,915.00", net: "$1,875.00", chip: "Open", chipTone: "warn" },
       { account: "This period outstanding", left: "$104,390.00", right: "$90,625.00", net: "$13,765.00" },
       { account: "Prior period outstanding", left: "—", right: "—", net: "$24,653.00" },
-      { account: "Accounts receivable", left: "—", right: "—", net: "$38,418.00", tone: "positive" },
+      { account: "Accounts receivable", left: "—", right: "—", net: "$38,418.00", tone: "positive", chip: "Settled mix", chipTone: "ok" },
     ],
   },
 };
@@ -177,20 +183,33 @@ const trialBalanceRows: TableRow[] = [
 const catalogue = [
   { section: "performance" as const, report: "Profit & Loss" as const, blurb: "Income, costs and net profit for the selected period." },
   { section: "performance" as const, report: "Cash flow" as const, blurb: "Cash in, cash out and the resulting bank movement." },
-  { section: "performance" as const, report: "Sales summary" as const, blurb: "Invoiced revenue, payments received and outstanding balances." },
+  { section: "performance" as const, report: "Revenue summary" as const, blurb: "Invoiced revenue, payments received and outstanding balances." },
   { section: "statements" as const, report: "Balance sheet" as const, blurb: "What the business owns and owes at a point in time." },
   { section: "statements" as const, report: "Trial balance" as const, blurb: "Debits and credits across all accounts, checking they balance." },
 ];
 
 const workspaceNav = [
   { label: "Dashboard", icon: LayoutDashboard, href: coreAppUrl },
-  { label: "Create", icon: Plus, href: coreAppUrl, create: true },
+  // LIQ-8: Reporting still shows the older "New" label; Core uses "Create".
+  { label: "New", icon: Plus, href: coreAppUrl, create: true },
   { label: "Sales", icon: ShoppingBag, href: `${coreAppUrl}#sales` },
   { label: "Purchases", icon: CreditCard, href: `${coreAppUrl}#purchases` },
   { label: "Banking", icon: Landmark, href: `${coreAppUrl}#banking` },
   { label: "Contacts", icon: Users, href: `${coreAppUrl}#contacts` },
   { label: "Reports", icon: FileBarChart2, current: true },
 ] as const;
+
+const reportRouteByHash: Record<string, { section: Section; report?: PerformanceReport | StatementReport }> = {
+  "profit-loss": { section: "performance", report: "Profit & Loss" },
+  "cash-flow": { section: "performance", report: "Cash flow" },
+  "revenue-summary": { section: "performance", report: "Revenue summary" },
+  "balance-sheet": { section: "statements", report: "Balance sheet" },
+  "trial-balance": { section: "statements", report: "Trial balance" },
+  all: { section: "all" },
+};
+
+/** Legacy Core deep link still used by liquid-accounting-core (LIQ-9). */
+const legacySalesSummaryHash = "sales-summary";
 
 function AppLogo({ collapsed }: { collapsed: boolean }) {
   return (
@@ -212,8 +231,43 @@ function App() {
   const [reportPickerOpen, setReportPickerOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => window.matchMedia("(max-width: 980px)").matches);
   const [expandedNav, setExpandedNav] = useState<string | null>("Reports");
+  const [staleDeepLink, setStaleDeepLink] = useState<string | null>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
   const currentPerformance = performanceReports[performanceReport];
+
+  useEffect(() => {
+    const applyHash = () => {
+      const hash = window.location.hash.replace(/^#/, "").trim().toLowerCase();
+      if (!hash) {
+        setStaleDeepLink(null);
+        return;
+      }
+      if (hash === legacySalesSummaryHash) {
+        // LIQ-9: Core still deep-links here after the rename to revenue-summary.
+        setStaleDeepLink(hash);
+        setSection("all");
+        return;
+      }
+      const matched = reportRouteByHash[hash];
+      if (!matched) {
+        setStaleDeepLink(hash);
+        setSection("all");
+        return;
+      }
+      setStaleDeepLink(null);
+      setSection(matched.section);
+      if (matched.section === "performance" && matched.report) {
+        setPerformanceReport(matched.report as PerformanceReport);
+      }
+      if (matched.section === "statements" && matched.report) {
+        setStatementReport(matched.report as StatementReport);
+      }
+    };
+
+    applyHash();
+    window.addEventListener("hashchange", applyHash);
+    return () => window.removeEventListener("hashchange", applyHash);
+  }, []);
 
   useEffect(() => {
     if (!reportPickerOpen) {
@@ -258,9 +312,11 @@ function App() {
         setOrganisation(nextOrganisation);
         setBffNetProfit(profitAndLoss.netProfit);
         setBffAvailable(true);
+        captureProductEvent(posthogClient, "bff_status", { source: "reporting", connected: true });
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return;
         setBffAvailable(false);
+        captureProductEvent(posthogClient, "bff_status", { source: "reporting", connected: false });
         console.info("Reporting BFF unavailable; displaying synthetic fallback data.");
       }
     };
@@ -290,12 +346,33 @@ function App() {
   const openReport = (nextSection: Section, report?: PerformanceReport | StatementReport) => {
     setSection(nextSection);
     setReportPickerOpen(false);
+    setStaleDeepLink(null);
     if (nextSection === "performance" && report) {
       setPerformanceReport(report as PerformanceReport);
     }
     if (nextSection === "statements" && report) {
       setStatementReport(report as StatementReport);
     }
+    const hash =
+      nextSection === "all"
+        ? "all"
+        : report === "Profit & Loss"
+          ? "profit-loss"
+          : report === "Cash flow"
+            ? "cash-flow"
+            : report === "Revenue summary"
+              ? "revenue-summary"
+              : report === "Balance sheet"
+                ? "balance-sheet"
+                : report === "Trial balance"
+                  ? "trial-balance"
+                  : nextSection;
+    window.history.replaceState({}, "", `${window.location.pathname}${window.location.search}#${hash}`);
+    captureProductEvent(posthogClient, "report_opened", {
+      source: "reporting",
+      section: nextSection,
+      report: report ?? nextSection,
+    });
   };
 
   const breadcrumb =
@@ -316,7 +393,7 @@ function App() {
         <button
           className="collapse-button"
           type="button"
-          aria-label={sidebarCollapsed ? "Expand navigation" : "Collapse navigation"}
+          aria-label="Toggle menu"
           onClick={() => setSidebarCollapsed((collapsed) => !collapsed)}
         >
           {sidebarCollapsed ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}
@@ -427,6 +504,28 @@ function App() {
           </nav>
 
           <div className="breadcrumb">{breadcrumb}</div>
+
+          {staleDeepLink ? (
+            <div className="deep-link-miss" role="alert">
+              <strong>Report link out of date.</strong>
+              <span>
+                {staleDeepLink === legacySalesSummaryHash
+                  ? "Core still opens #sales-summary. This app renamed that report to Revenue summary (#revenue-summary)."
+                  : `No report is registered for #${staleDeepLink}.`}
+              </span>
+              <button
+                type="button"
+                className="text-button"
+                onClick={() => {
+                  setStaleDeepLink(null);
+                  openReport("performance", "Revenue summary");
+                  window.history.replaceState({}, "", `${window.location.pathname}${window.location.search}#revenue-summary`);
+                }}
+              >
+                Open Revenue summary
+              </button>
+            </div>
+          ) : null}
 
           {section === "all" && (
             <>
@@ -583,6 +682,9 @@ function App() {
                       <tr key={row.account} className={index === currentPerformance.rows.length - 1 ? "total-row" : ""}>
                         <td>
                           <strong>{row.account}</strong>
+                          {row.chip ? (
+                            <span className={`chip chip-${row.chipTone ?? "ok"}`}>{row.chip}</span>
+                          ) : null}
                         </td>
                         <td>{row.left}</td>
                         <td>{row.right}</td>
@@ -828,4 +930,12 @@ function App() {
   );
 }
 
-createRoot(document.getElementById("root")!).render(<App />);
+createRoot(document.getElementById("root")!).render(
+  posthogClient ? (
+    <PostHogProvider client={posthogClient}>
+      <App />
+    </PostHogProvider>
+  ) : (
+    <App />
+  ),
+);
