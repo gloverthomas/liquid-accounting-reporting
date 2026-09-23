@@ -1,0 +1,83 @@
+tsconfig.node.json
+  s_1ff4efca0b2e39::t_3af6ccb804c9af 1-16
+tsconfig.json
+  s_1ff4efca0b2e39::t_ed4817ad503be5 1-7
+src/vite-env.d.ts
+  s_1ff4efca0b2e39::t_4a2c91aa1e1af1 1
+package.json
+  s_1ff4efca0b2e39::t_b4e150b64d7d5a 8
+  s_1ff4efca0b2e39::t_c14613a4c91935 1-7,9-25
+index.html
+  s_1ff4efca0b2e39::t_74e83ac0bd4826 1-13
+server/server.mjs
+  s_1ff4efca0b2e39::t_9228f627332aab 1-11,16-70,74-80,82-91,97-109,111-127
+  s_1ff4efca0b2e39::t_fc8319c6f7ee1f 14-15,71-73,81,92-96,110
+  s_1ff4efca0b2e39::t_4fcf7ab05746fd 12-13
+src/main.tsx
+  s_1ff4efca0b2e39::t_14714784b65e9c 5,10,19,324,378-379,383,387,395-396,398-399,404-407,413-414
+  s_1ff4efca0b2e39::t_60f5b79a505ae4 188-190
+  s_1ff4efca0b2e39::t_866a959a8f7357 226-228
+  s_1ff4efca0b2e39::t_e9a05bfcbfb0e0 370
+  s_1ff4efca0b2e39::t_45edfae0255e68 400-403
+  s_1ff4efca0b2e39::t_d6d66409814ee9 148-150
+  s_1ff4efca0b2e39::t_aad3b3ebf2ac58 43-62
+  s_1ff4efca0b2e39::t_2c59818c74fbd2 310-323,325-328,330-369,371-377,380-382,384-386,388-393
+  s_1ff4efca0b2e39::t_fd4dafaa877556 123,127
+  s_1ff4efca0b2e39::t_c52303a113c417 329
+  s_1ff4efca0b2e39::t_f8a307e4098a28 185-187,191-204
+  s_1ff4efca0b2e39::t_f0f8534f5b8a7e 245,273-289
+  s_1ff4efca0b2e39::t_c4a72bf4409dfb 124-126
+  s_1ff4efca0b2e39::t_a5cbd1633e4bc0 95,116
+  s_1ff4efca0b2e39::t_b637905cb40a86 33-34,209-210,246-259,261-262,264-272,510
+  s_1ff4efca0b2e39::t_7ff643cee71a6d 8,11,15,17,21,24,26-27
+  s_1ff4efca0b2e39::t_6005f16f8a1e3f 211,260,263,408-412
+  s_1ff4efca0b2e39::t_e9645e60bdfe4d 1,9,30-32,35-42,63-84,86,93-94,98-106,114-115,119-122,128,130-147,151-152,154-175,177-184,206-208,215-225,229-243,290-307,416-424,426-471,473-487,489,491-493,495-509,511-523,525-614,616-630,633-634,636-751,753-767,770-771,773-824
+  s_1ff4efca0b2e39::t_56000da2772da9 213-214
+  s_1ff4efca0b2e39::t_2a8617af80f0f2 488,490,631-632,635,768-769,772
+  s_1ff4efca0b2e39::t_414ead8af8b470 2-4,6-7,12-14,16,18,20,22-23,25,28-29,85,87-92,107-110,113,129,153,176,205,212,244,308-309,394,397,415,425,472,494,524,615,752,825-831
+  s_1ff4efca0b2e39::t_61aac21901bcf7 96-97,117-118
+  s_1ff4efca0b2e39::t_138dcf99961317 111-112
+src/styles.css
+  s_1ff4efca0b2e39::t_d991ef2cc9fe83 16-22,36-37,39-50,54-65,68
+  s_1ff4efca0b2e39::t_092c01f849157b 160-164
+  s_1ff4efca0b2e39::t_9fbd0d6c2e3b4e 82-108
+  s_1ff4efca0b2e39::t_12c891b1bf1857 1-2,5-12,24,34,51-52,73,75-81,109-152,154,156-159,166-175,177
+  s_1ff4efca0b2e39::t_dda7c50094234c 15
+  s_1ff4efca0b2e39::t_56213a932609e0 30-33,165
+  s_1ff4efca0b2e39::t_bba6c0f07fef51 153,155
+  s_1ff4efca0b2e39::t_5ed7296a259f36 3-4,13-14,23,25-29,35,38,53,66-67,69-72,74
+  s_1ff4efca0b2e39::t_19200d9179ecdf 176
+.gitignore
+  s_1ff4efca0b2e39::t_5c4712603660be 1-4
+vite.config.ts
+  s_1ff4efca0b2e39::t_ac1b340aec295c 1-3,6-9,17-18
+  s_1ff4efca0b2e39::t_30fda7f2ac3ac0 4-5,10-16
+README.md
+  s_1ff4efca0b2e39::t_903b96c1a1d503 14-21
+  s_1ff4efca0b2e39::t_daaf951f5e0432 24,28,31-32,40-41,43
+  s_1ff4efca0b2e39::t_0eb54c460c9fc0 1-13,45-46,54-58
+  s_1ff4efca0b2e39::t_ddb1fa4611576e 47-48,50
+  s_1ff4efca0b2e39::t_03a7bf1f7061e6 49,51-53
+  s_1ff4efca0b2e39::t_c4733efc09c81d 22-23,25-27,29-30,33-39,42,44
+tsconfig.app.json
+  s_1ff4efca0b2e39::t_c9c20e9f104200 16-17
+  s_1ff4efca0b2e39::t_3406f1ed111ea0 1-15,18-20
+package-lock.json
+  s_1ff4efca0b2e39::t_da37054a5614cb 1-1757
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "f4ec8a897e58eb6a2018d412343640829445f610",
+  "prompts": {},
+  "sessions": {
+    "s_1ff4efca0b2e39": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4fcfdf65-1861-4d8a-a8d1-8d2da72aeb5d",
+        "model": "auto-smart"
+      },
+      "human_author": "Tom Glover <tom.glover@myob.com>"
+    }
+  }
+}
