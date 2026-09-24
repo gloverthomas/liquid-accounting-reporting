@@ -277,10 +277,16 @@ function App() {
         return;
       }
       if (hash === legacySalesSummaryHash) {
-        // LIQ-9: Core still deep-links here after the rename to revenue-summary.
+        // LIQ-9: accept legacy Core deep links and rewrite to the renamed report.
         reportLegacyDeepLink(hash);
-        setStaleDeepLink(hash);
-        setSection("all");
+        window.history.replaceState(
+          {},
+          "",
+          `${window.location.pathname}${window.location.search}#revenue-summary`,
+        );
+        setStaleDeepLink(null);
+        setSection("performance");
+        setPerformanceReport("Revenue summary");
         return;
       }
       const matched = reportRouteByHash[hash];
@@ -554,11 +560,9 @@ function App() {
             <div className="deep-link-miss" role="alert">
               <strong>Report link out of date.</strong>
               <span>
-                {staleDeepLink === legacySalesSummaryHash
-                  ? "Core still opens #sales-summary. This app renamed that report to Revenue summary (#revenue-summary)."
-                  : staleDeepLink === invoicePerformanceHash
-                    ? "Core Create Invoice / Reports opens #invoice-performance, but Reporting has no such report (LIQ-15)."
-                    : `No report is registered for #${staleDeepLink}.`}
+                {staleDeepLink === invoicePerformanceHash
+                  ? "Core Create Invoice / Reports opens #invoice-performance, but Reporting has no such report (LIQ-15)."
+                  : `No report is registered for #${staleDeepLink}.`}
               </span>
               <button
                 type="button"
