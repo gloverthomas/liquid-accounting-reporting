@@ -93,12 +93,4 @@ export function reportLegacyDeepLink(hash: string): void {
   });
 }
 
-/** LIQ-16: Reporting Help centre chrome is dead while Core works. */
-export function reportHelpCentreFailure(surface: "sidebar" | "header"): void {
-  Sentry.captureMessage("Reporting Help centre control failed", {
-    level: "error",
-    tags: { app: "reporting", kind: "shell-parity", seam: "LIQ-16", surface },
-  });
-}
-
 export { Sentry };
