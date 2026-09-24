@@ -93,4 +93,12 @@ export function reportLegacyDeepLink(hash: string): void {
   });
 }
 
+/** LIQ-17: Reporting Notifications chrome is dead while Core works. */
+export function reportNotificationsFailure(surface: "header"): void {
+  Sentry.captureMessage("Reporting Notifications control failed", {
+    level: "error",
+    tags: { app: "reporting", kind: "shell-parity", seam: "LIQ-17", surface },
+  });
+}
+
 export { Sentry };

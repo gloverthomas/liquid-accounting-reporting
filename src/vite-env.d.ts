@@ -6,6 +6,7 @@ interface ImportMetaEnv {
   readonly VITE_CORE_APP_URL?: string;
   readonly VITE_SENTRY_DSN?: string;
   readonly VITE_APP_VERSION?: string;
+  readonly VITE_WORKFLOW_SIGNAL_URL?: string;
 }
 
 interface ImportMeta {

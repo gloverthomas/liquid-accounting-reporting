@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+
+  help-proof:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Start Vite preview
+        run: |
+          npm run build
+          npx vite preview --host 127.0.0.1 --port 3001 &
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:3001/ >/dev/null && exit 0
+            sleep 1
+          done
+          exit 1
+      - name: Help proof screenshots
+        run: npm run test:e2e:proof
+        env:
+          REPORTING_APP_URL: http://127.0.0.1:3001
+      - name: Upload screenshot artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: help-proof
+          path: e2e/proof/*.png
+          if-no-files-found: warn
+      - name: Comment proof on PR
+        if: github.event_name == 'pull_request' && always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          BODY="## Visual proof (Playwright)
+          Help screenshots are attached as artifact **help-proof**.
+          Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          Embed \`docs/pr-proof/*.png\` in the PR description for inline images.
+          "
+          gh pr comment "${{ github.event.pull_request.number }}" --body "$BODY" || true

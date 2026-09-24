@@ -25,7 +25,8 @@ import {
 } from "lucide-react";
 import { PostHogProvider } from "@posthog/react";
 import { captureProductEvent, createPosthogClient } from "./analytics";
-import { initSentry, reportCrossAppUrlDrift, reportLegacyDeepLink, Sentry } from "./sentry";
+import { signalNotificationsIncident } from "./demoSignal";
+import { initSentry, reportCrossAppUrlDrift, reportLegacyDeepLink, reportNotificationsFailure, Sentry } from "./sentry";
 import liquidLogo from "./media/liquid-logo.png";
 import liquidMark from "./media/liquid-mark.png";
 import "./styles.css";
@@ -242,6 +243,8 @@ function App() {
   const [expandedNav, setExpandedNav] = useState<string | null>("Reports");
   const [staleDeepLink, setStaleDeepLink] = useState<string | null>(null);
   const [helpMenuOpen, setHelpMenuOpen] = useState(false);
+  const [notificationsError, setNotificationsError] = useState<string | null>(null);
+  const [notificationsBusy, setNotificationsBusy] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
   const helpMenuRef = useRef<HTMLDivElement>(null);
   const currentPerformance = performanceReports[performanceReport];
@@ -250,6 +253,15 @@ function App() {
     setHelpMenuOpen((open) => !open);
     captureProductEvent(posthogClient, "product_navigation", { source: "reporting", section: "Dashboard" });
   }, []);
+
+  const openBrokenNotifications = async () => {
+    setNotificationsBusy(true);
+    setNotificationsError(null);
+    reportNotificationsFailure("header");
+    void signalNotificationsIncident({ surface: "header" });
+    setNotificationsBusy(false);
+    setNotificationsError("Something went wrong opening Notifications. Try again in a moment, or contact support.");
+  };
 
   useEffect(() => {
     if (!helpMenuOpen) return;
@@ -523,7 +535,18 @@ function App() {
           </a>
           <div className="reporting-search"><Search size={17} /><span>Search</span><kbd>⌘ K</kbd></div>
           <div className="topbar-actions">
-            <button className="header-icon" type="button" disabled title="Notifications are not available in this prototype"><Bell size={19} /></button>
+            <button
+              className="header-icon"
+              type="button"
+              aria-label="Notifications"
+              disabled={notificationsBusy}
+              onClick={() => {
+                void openBrokenNotifications();
+              }}
+            >
+              <Bell size={19} />
+              <span className="notification-dot" />
+            </button>
             <div className="help-menu" ref={helpMenuRef}>
               <button
                 className="help-button"
@@ -566,6 +589,15 @@ function App() {
           </div>
         </header>
         <section className="reporting-content">
+          {notificationsError ? (
+            <div className="deep-link-miss" role="alert">
+              <strong>Notifications are temporarily unavailable.</strong>
+              <span>{notificationsError}</span>
+              <button type="button" className="text-button" onClick={() => setNotificationsError(null)}>
+                Dismiss
+              </button>
+            </div>
+          ) : null}
           <nav className="mobile-section-nav" aria-label="Report sections">
             {sections.map((item) => (
               <button
