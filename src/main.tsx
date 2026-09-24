@@ -252,13 +252,10 @@ function App() {
     setHelpError(null);
     captureProductEvent(posthogClient, "product_navigation", { source: "reporting", section: "all" });
     reportHelpCentreFailure(surface);
-    const signal = await signalHelpCentreIncident({ surface });
+    // Fire-and-forget: never block the UI on workflow latency / tunnel failures.
+    void signalHelpCentreIncident({ surface });
     setHelpBusy(false);
-    setHelpError(
-      signal.ok
-        ? "Help centre failed to load in Reporting (LIQ-16). Incident signalled."
-        : "Help centre failed to load in Reporting (LIQ-16). Workflow signal unavailable — is the tunnel up?",
-    );
+    setHelpError("Something went wrong opening Help. Try again in a moment, or contact support.");
   };
 
   useEffect(() => {
@@ -540,7 +537,7 @@ function App() {
         <section className="reporting-content">
           {helpError ? (
             <div className="shell-parity-miss" role="alert">
-              <strong>Help centre unavailable.</strong>
+              <strong>Help is temporarily unavailable.</strong>
               <span>{helpError}</span>
               <button type="button" className="text-button" onClick={() => setHelpError(null)}>
                 Dismiss
