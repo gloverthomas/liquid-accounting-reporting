@@ -25,10 +25,12 @@ import {
 } from "lucide-react";
 import { PostHogProvider } from "@posthog/react";
 import { captureProductEvent, createPosthogClient } from "./analytics";
+import { initSentry, reportCrossAppUrlDrift, reportLegacyDeepLink, Sentry } from "./sentry";
 import liquidLogo from "./media/liquid-logo.png";
 import liquidMark from "./media/liquid-mark.png";
 import "./styles.css";
 
+initSentry("reporting");
 const posthogClient = createPosthogClient("reporting");
 
 type Section = "all" | "performance" | "statements";
@@ -65,6 +67,13 @@ function resolveCoreAppUrl(configuredUrl: string | undefined) {
 }
 
 const coreAppUrl = resolveCoreAppUrl(import.meta.env.VITE_CORE_APP_URL);
+reportCrossAppUrlDrift({
+  app: "reporting",
+  configuredUrl: coreAppUrl,
+  role: "core-target",
+});
+
+const invoicePerformanceHash = "invoice-performance";
 
 type FlowReport = {
   title: string;
@@ -244,12 +253,14 @@ function App() {
       }
       if (hash === legacySalesSummaryHash) {
         // LIQ-9: Core still deep-links here after the rename to revenue-summary.
+        reportLegacyDeepLink(hash);
         setStaleDeepLink(hash);
         setSection("all");
         return;
       }
       const matched = reportRouteByHash[hash];
       if (!matched) {
+        reportLegacyDeepLink(hash);
         setStaleDeepLink(hash);
         setSection("all");
         return;
@@ -511,7 +522,9 @@ function App() {
               <span>
                 {staleDeepLink === legacySalesSummaryHash
                   ? "Core still opens #sales-summary. This app renamed that report to Revenue summary (#revenue-summary)."
-                  : `No report is registered for #${staleDeepLink}.`}
+                  : staleDeepLink === invoicePerformanceHash
+                    ? "Core Create Invoice / Reports opens #invoice-performance, but Reporting has no such report (LIQ-15)."
+                    : `No report is registered for #${staleDeepLink}.`}
               </span>
               <button
                 type="button"
@@ -931,11 +944,13 @@ function App() {
 }
 
 createRoot(document.getElementById("root")!).render(
-  posthogClient ? (
-    <PostHogProvider client={posthogClient}>
+  <Sentry.ErrorBoundary fallback={<p>Something went wrong loading Liquid Reporting.</p>}>
+    {posthogClient ? (
+      <PostHogProvider client={posthogClient}>
+        <App />
+      </PostHogProvider>
+    ) : (
       <App />
-    </PostHogProvider>
-  ) : (
-    <App />
-  ),
+    )}
+  </Sentry.ErrorBoundary>,
 );
