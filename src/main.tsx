@@ -25,7 +25,8 @@ import {
 } from "lucide-react";
 import { PostHogProvider } from "@posthog/react";
 import { captureProductEvent, createPosthogClient } from "./analytics";
-import { initSentry, reportCrossAppUrlDrift, reportLegacyDeepLink, Sentry } from "./sentry";
+import { signalHelpCentreIncident } from "./demoSignal";
+import { initSentry, reportCrossAppUrlDrift, reportHelpCentreFailure, reportLegacyDeepLink, Sentry } from "./sentry";
 import liquidLogo from "./media/liquid-logo.png";
 import liquidMark from "./media/liquid-mark.png";
 import "./styles.css";
@@ -241,8 +242,24 @@ function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => window.matchMedia("(max-width: 980px)").matches);
   const [expandedNav, setExpandedNav] = useState<string | null>("Reports");
   const [staleDeepLink, setStaleDeepLink] = useState<string | null>(null);
+  const [helpError, setHelpError] = useState<string | null>(null);
+  const [helpBusy, setHelpBusy] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
   const currentPerformance = performanceReports[performanceReport];
+
+  const openBrokenHelp = async (surface: "sidebar" | "header") => {
+    setHelpBusy(true);
+    setHelpError(null);
+    captureProductEvent(posthogClient, "product_navigation", { source: "reporting", section: "all" });
+    reportHelpCentreFailure(surface);
+    const signal = await signalHelpCentreIncident({ surface });
+    setHelpBusy(false);
+    setHelpError(
+      signal.ok
+        ? "Help centre failed to load in Reporting (LIQ-16). Incident signalled."
+        : "Help centre failed to load in Reporting (LIQ-16). Workflow signal unavailable — is the tunnel up?",
+    );
+  };
 
   useEffect(() => {
     const applyHash = () => {
@@ -469,7 +486,16 @@ function App() {
             <Settings size={19} />
             <span className="sidebar-label">Settings</span>
           </button>
-          <button className="report-nav" type="button" disabled title="Help centre">
+          <button
+            className="report-nav"
+            type="button"
+            title="Help centre"
+            aria-label="Help centre"
+            disabled={helpBusy}
+            onClick={() => {
+              void openBrokenHelp("sidebar");
+            }}
+          >
             <CircleHelp size={19} />
             <span className="sidebar-label">Help centre</span>
           </button>
@@ -492,7 +518,18 @@ function App() {
           <div className="reporting-search"><Search size={17} /><span>Search</span><kbd>⌘ K</kbd></div>
           <div className="topbar-actions">
             <button className="header-icon" type="button" disabled title="Notifications are not available in this prototype"><Bell size={19} /></button>
-            <button className="header-icon" type="button" disabled title="More actions are not available in this prototype"><MoreHorizontal size={20} /></button>
+            <button
+              className="help-button"
+              type="button"
+              aria-label="Help"
+              disabled={helpBusy}
+              onClick={() => {
+                void openBrokenHelp("header");
+              }}
+            >
+              <CircleHelp size={17} />
+              <span>Help</span>
+            </button>
             <span className="business-switcher" title={bffAvailable ? "Reporting BFF connected" : "Reporting fixture fallback"}>
               <i>LC</i>
               <span className="business-copy"><strong>{organisation.name}</strong><small>{bffAvailable ? "Reporting BFF" : "Fixture fallback"}</small></span>
@@ -501,6 +538,15 @@ function App() {
           </div>
         </header>
         <section className="reporting-content">
+          {helpError ? (
+            <div className="shell-parity-miss" role="alert">
+              <strong>Help centre unavailable.</strong>
+              <span>{helpError}</span>
+              <button type="button" className="text-button" onClick={() => setHelpError(null)}>
+                Dismiss
+              </button>
+            </div>
+          ) : null}
           <nav className="mobile-section-nav" aria-label="Report sections">
             {sections.map((item) => (
               <button
