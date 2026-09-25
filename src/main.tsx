@@ -2,12 +2,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   ArrowLeft,
-  Bell,
   CalendarDays,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  CircleHelp,
   CreditCard,
   Download,
   FileBarChart2,
@@ -27,8 +25,8 @@ import {
 import { PostHogProvider } from "@posthog/react";
 import { AiAssistant } from "./components/AiAssistant";
 import { captureProductEvent, createPosthogClient } from "./analytics";
-import { signalAssistantIncident, signalNotificationsIncident } from "./demoSignal";
-import { initSentry, reportCrossAppUrlDrift, reportLegacyDeepLink, reportNotificationsFailure, Sentry } from "./sentry";
+import { signalAssistantIncident } from "./demoSignal";
+import { initSentry, reportCrossAppUrlDrift, reportLegacyDeepLink, Sentry } from "./sentry";
 import liquidLogo from "./media/liquid-logo.png";
 import liquidMark from "./media/liquid-mark.png";
 import "./styles.css";
@@ -244,19 +242,10 @@ function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => window.matchMedia("(max-width: 980px)").matches);
   const [expandedNav, setExpandedNav] = useState<string | null>("Reports");
   const [staleDeepLink, setStaleDeepLink] = useState<string | null>(null);
-  const [helpMenuOpen, setHelpMenuOpen] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const sidebarBeforeAssistantRef = useRef(false);
-  const [notificationsError, setNotificationsError] = useState<string | null>(null);
-  const [notificationsBusy, setNotificationsBusy] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
-  const helpMenuRef = useRef<HTMLDivElement>(null);
   const currentPerformance = performanceReports[performanceReport];
-
-  const toggleHelpMenu = useCallback(() => {
-    setHelpMenuOpen((open) => !open);
-    captureProductEvent(posthogClient, "product_navigation", { source: "reporting", section: "Dashboard" });
-  }, []);
 
   const toggleAssistant = useCallback(() => {
     setAssistantOpen((open) => {
@@ -279,33 +268,6 @@ function App() {
     setAssistantOpen(false);
     setSidebarCollapsed(sidebarBeforeAssistantRef.current);
   }, []);
-
-  const openBrokenNotifications = async () => {
-    setNotificationsBusy(true);
-    setNotificationsError(null);
-    reportNotificationsFailure("header");
-    void signalNotificationsIncident({ surface: "header" });
-    setNotificationsBusy(false);
-    setNotificationsError("Something went wrong opening Notifications. Try again in a moment, or contact support.");
-  };
-
-  useEffect(() => {
-    if (!helpMenuOpen) return;
-    const onPointerDown = (event: PointerEvent) => {
-      if (!helpMenuRef.current?.contains(event.target as Node)) {
-        setHelpMenuOpen(false);
-      }
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setHelpMenuOpen(false);
-    };
-    window.addEventListener("pointerdown", onPointerDown);
-    window.addEventListener("keydown", onKeyDown);
-    return () => {
-      window.removeEventListener("pointerdown", onPointerDown);
-      window.removeEventListener("keydown", onKeyDown);
-    };
-  }, [helpMenuOpen]);
 
   useEffect(() => {
     const applyHash = () => {
@@ -532,17 +494,6 @@ function App() {
             <Settings size={19} />
             <span className="sidebar-label">Settings</span>
           </button>
-          <button
-            className="report-nav"
-            type="button"
-            title="Help centre"
-            aria-label="Help centre"
-            aria-expanded={helpMenuOpen}
-            onClick={toggleHelpMenu}
-          >
-            <CircleHelp size={19} />
-            <span className="sidebar-label">Help centre</span>
-          </button>
           <div className="profile-card" title="Jordan Green" aria-label="Jordan Green, Owner">
             <span className="profile-avatar" aria-hidden="true">JG</span>
             <span className="sidebar-label">
@@ -553,7 +504,7 @@ function App() {
         </div>
       </aside>
 
-      <main className="reporting-main">
+      <div className="workspace">
         <header className="reporting-header">
           <a className="mobile-core-link" href={coreAppUrl}>
             <ArrowLeft size={16} />
@@ -572,68 +523,18 @@ function App() {
               <span>AI Assistant</span>
             </button>
             <button
-              className="header-icon"
+              className="business-switcher"
               type="button"
-              aria-label="Notifications"
-              disabled={notificationsBusy}
-              onClick={() => {
-                void openBrokenNotifications();
-              }}
+              aria-label={`${organisation.name}`}
+              title={organisation.name}
             >
-              <Bell size={19} />
-              <span className="notification-dot" />
+              <span className="business-avatar" aria-hidden="true">LC</span>
             </button>
-            <div className="help-menu" ref={helpMenuRef}>
-              <button
-                className="help-button"
-                type="button"
-                aria-label="Help"
-                aria-expanded={helpMenuOpen}
-                aria-haspopup="menu"
-                onClick={toggleHelpMenu}
-              >
-                <CircleHelp size={17} />
-                <span>Help</span>
-              </button>
-              {helpMenuOpen ? (
-                <div className="help-popover" role="menu" aria-label="Help centre">
-                  <p className="help-popover-title">Help centre</p>
-                  <button type="button" role="menuitem" onClick={() => setHelpMenuOpen(false)}>
-                    Keyboard shortcuts
-                  </button>
-                  <button type="button" role="menuitem" onClick={() => setHelpMenuOpen(false)}>
-                    Contact support
-                  </button>
-                  <button type="button" role="menuitem" onClick={() => setHelpMenuOpen(false)}>
-                    What’s new in Liquid
-                  </button>
-                  <a
-                    role="menuitem"
-                    href="https://liquid-accounting.world"
-                    onClick={() => setHelpMenuOpen(false)}
-                  >
-                    Product docs
-                  </a>
-                </div>
-              ) : null}
-            </div>
-            <span className="business-switcher" title={bffAvailable ? "Reporting BFF connected" : "Reporting fixture fallback"}>
-              <i>LC</i>
-              <span className="business-copy"><strong>{organisation.name}</strong><small>{bffAvailable ? "Reporting BFF" : "Fixture fallback"}</small></span>
-              <ChevronDown size={15} />
-            </span>
           </div>
         </header>
+        <div className="workspace-body">
+        <main className="reporting-main">
         <section className="reporting-content">
-          {notificationsError ? (
-            <div className="deep-link-miss" role="alert">
-              <strong>Notifications are temporarily unavailable.</strong>
-              <span>{notificationsError}</span>
-              <button type="button" className="text-button" onClick={() => setNotificationsError(null)}>
-                Dismiss
-              </button>
-            </div>
-          ) : null}
           <nav className="mobile-section-nav" aria-label="Report sections">
             {sections.map((item) => (
               <button
@@ -1083,6 +984,8 @@ function App() {
             void signalAssistantIncident({ surface: "header" });
           }}
         />
+      </div>
+        </div>
       </div>
     </div>
   );
