@@ -13,6 +13,7 @@ const allowedEvents = new Set([
   "product_navigation",
   "report_opened",
   "bff_status",
+  "assistant_message_sent",
   "create_dialog_opened",
 ]);
 
@@ -39,6 +40,8 @@ const allowedReports = new Set([
 ]);
 
 const allowedSources = new Set(["core", "reporting"]);
+/** AI Assistant message outcomes: usage + failure rate, never message content. */
+const allowedOutcomes = new Set(["answered", "failed"]);
 const projectTokenPattern = /^phc_[A-Za-z0-9_-]{20,}$/;
 
 function isAllowedProperty(key: string, value: Property): boolean {
@@ -50,6 +53,9 @@ function isAllowedProperty(key: string, value: Property): boolean {
   }
   if (key === "report") {
     return typeof value === "string" && allowedReports.has(value);
+  }
+  if (key === "outcome") {
+    return typeof value === "string" && allowedOutcomes.has(value);
   }
   if (key === "connected") {
     return typeof value === "boolean";
@@ -102,7 +108,7 @@ export function createPosthogClient(app: "core" | "reporting"): PostHog | null {
 
 export function captureProductEvent(
   client: PostHog | null,
-  event: "product_navigation" | "report_opened" | "bff_status" | "create_dialog_opened",
+  event: "product_navigation" | "report_opened" | "bff_status" | "create_dialog_opened" | "assistant_message_sent",
   properties?: Record<string, Property>,
 ): CaptureResult | undefined {
   return client?.capture(event, sanitiseProperties(properties));

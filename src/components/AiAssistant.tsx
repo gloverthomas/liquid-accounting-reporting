@@ -56,6 +56,8 @@ type Props = {
   userName?: string;
   /** Fired when the intentional Reporting defect surfaces (for /signal triage). */
   onBrokenFailure?: (message: string) => void;
+  /** Reports each message's outcome (answered/failed) for usage analytics; never the message text. */
+  onMessageOutcome?: (outcome: "answered" | "failed") => void;
 };
 
 function newId() {
@@ -203,6 +205,7 @@ export function AiAssistant({
   contextLabel = "Dashboard",
   broken = false,
   userName = "Jordan",
+  onMessageOutcome,
   onBrokenFailure,
 }: Props) {
   const titleId = useId();
@@ -254,6 +257,7 @@ export function AiAssistant({
       setBusy(true);
 
       if (broken) {
+        onMessageOutcome?.("failed");
         await new Promise((r) => setTimeout(r, 450));
         setBusy(false);
         const failure =
@@ -299,13 +303,15 @@ export function AiAssistant({
             relatedQuestions: normalizeRelated(data.relatedQuestions),
           },
         ]);
+        onMessageOutcome?.("answered");
       } catch (err) {
+        onMessageOutcome?.("failed");
         setError(err instanceof Error ? err.message : "assistant_failed");
       } finally {
         setBusy(false);
       }
     },
-    [busy, broken, context, messages, onBrokenFailure],
+    [busy, broken, context, messages, onBrokenFailure, onMessageOutcome],
   );
 
   if (!open) return null;

@@ -979,6 +979,7 @@ function App() {
           onClose={closeAssistant}
           contextLabel="Dashboard"
           userName="Jordan"
+          onMessageOutcome={(outcome) => captureProductEvent(posthogClient, "assistant_message_sent", { source: "reporting", outcome })}
           broken
           onBrokenFailure={() => {
             void signalAssistantIncident({ surface: "header" });
