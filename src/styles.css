@@ -249,7 +249,6 @@ kbd { margin-left: auto; border: 1px solid #e5e7eb; border-radius: 4px; color: #
 }
 @media (max-width: 640px) {
   .reporting-header { height: 54px; padding: 0 15px; }
-  .reporting-main { min-height: calc(100vh - 54px); }
   .mobile-core-link { display: inline-flex; }
   .reporting-search { display: none; }
   .topbar-actions { margin-left: auto; }
