@@ -41,7 +41,7 @@ jobs:
             sleep 1
           done
           exit 1
-      - name: Help proof screenshots
+      - name: Help and Notifications proof screenshots
         run: npm run test:e2e:proof
         env:
           REPORTING_APP_URL: http://127.0.0.1:3001
@@ -58,7 +58,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           BODY="## Visual proof (Playwright)
-          Help screenshots are attached as artifact **help-proof**.
+          Help and Notifications screenshots are attached as artifact **help-proof**.
           Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
           Embed \`docs/pr-proof/*.png\` in the PR description for inline images.

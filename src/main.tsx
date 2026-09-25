@@ -25,8 +25,7 @@ import {
 } from "lucide-react";
 import { PostHogProvider } from "@posthog/react";
 import { captureProductEvent, createPosthogClient } from "./analytics";
-import { signalNotificationsIncident } from "./demoSignal";
-import { initSentry, reportCrossAppUrlDrift, reportLegacyDeepLink, reportNotificationsFailure, Sentry } from "./sentry";
+import { initSentry, reportCrossAppUrlDrift, reportLegacyDeepLink, Sentry } from "./sentry";
 import liquidLogo from "./media/liquid-logo.png";
 import liquidMark from "./media/liquid-mark.png";
 import "./styles.css";
@@ -243,35 +242,40 @@ function App() {
   const [expandedNav, setExpandedNav] = useState<string | null>("Reports");
   const [staleDeepLink, setStaleDeepLink] = useState<string | null>(null);
   const [helpMenuOpen, setHelpMenuOpen] = useState(false);
-  const [notificationsError, setNotificationsError] = useState<string | null>(null);
-  const [notificationsBusy, setNotificationsBusy] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
   const helpMenuRef = useRef<HTMLDivElement>(null);
+  const notificationsRef = useRef<HTMLDivElement>(null);
   const currentPerformance = performanceReports[performanceReport];
 
   const toggleHelpMenu = useCallback(() => {
+    setNotificationsOpen(false);
     setHelpMenuOpen((open) => !open);
     captureProductEvent(posthogClient, "product_navigation", { source: "reporting", section: "Dashboard" });
   }, []);
 
-  const openBrokenNotifications = async () => {
-    setNotificationsBusy(true);
-    setNotificationsError(null);
-    reportNotificationsFailure("header");
-    void signalNotificationsIncident({ surface: "header" });
-    setNotificationsBusy(false);
-    setNotificationsError("Something went wrong opening Notifications. Try again in a moment, or contact support.");
-  };
+  const toggleNotifications = useCallback(() => {
+    setHelpMenuOpen(false);
+    setNotificationsOpen((open) => !open);
+    captureProductEvent(posthogClient, "product_navigation", { source: "reporting", section: "Notifications" });
+  }, []);
 
   useEffect(() => {
-    if (!helpMenuOpen) return;
+    if (!helpMenuOpen && !notificationsOpen) return;
     const onPointerDown = (event: PointerEvent) => {
-      if (!helpMenuRef.current?.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (helpMenuOpen && !helpMenuRef.current?.contains(target)) {
         setHelpMenuOpen(false);
+      }
+      if (notificationsOpen && !notificationsRef.current?.contains(target)) {
+        setNotificationsOpen(false);
       }
     };
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setHelpMenuOpen(false);
+      if (event.key === "Escape") {
+        setHelpMenuOpen(false);
+        setNotificationsOpen(false);
+      }
     };
     window.addEventListener("pointerdown", onPointerDown);
     window.addEventListener("keydown", onKeyDown);
@@ -279,7 +283,7 @@ function App() {
       window.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [helpMenuOpen]);
+  }, [helpMenuOpen, notificationsOpen]);
 
   useEffect(() => {
     const applyHash = () => {
@@ -535,18 +539,33 @@ function App() {
           </a>
           <div className="reporting-search"><Search size={17} /><span>Search</span><kbd>⌘ K</kbd></div>
           <div className="topbar-actions">
-            <button
-              className="header-icon"
-              type="button"
-              aria-label="Notifications"
-              disabled={notificationsBusy}
-              onClick={() => {
-                void openBrokenNotifications();
-              }}
-            >
-              <Bell size={19} />
-              <span className="notification-dot" />
-            </button>
+            <div className="notifications-menu" ref={notificationsRef}>
+              <button
+                className="header-icon"
+                type="button"
+                aria-label="Notifications"
+                aria-expanded={notificationsOpen}
+                aria-haspopup="menu"
+                onClick={toggleNotifications}
+              >
+                <Bell size={19} />
+                <span className="notification-dot" />
+              </button>
+              {notificationsOpen ? (
+                <div className="help-popover notifications-popover" role="menu" aria-label="Notifications">
+                  <p className="help-popover-title">Notifications</p>
+                  <button type="button" role="menuitem" onClick={() => setNotificationsOpen(false)}>
+                    Invoice INV-1042 was paid
+                  </button>
+                  <button type="button" role="menuitem" onClick={() => setNotificationsOpen(false)}>
+                    Bank feed needs review
+                  </button>
+                  <button type="button" role="menuitem" onClick={() => setNotificationsOpen(false)}>
+                    Payroll run is ready
+                  </button>
+                </div>
+              ) : null}
+            </div>
             <div className="help-menu" ref={helpMenuRef}>
               <button
                 className="help-button"
@@ -589,15 +608,6 @@ function App() {
           </div>
         </header>
         <section className="reporting-content">
-          {notificationsError ? (
-            <div className="deep-link-miss" role="alert">
-              <strong>Notifications are temporarily unavailable.</strong>
-              <span>{notificationsError}</span>
-              <button type="button" className="text-button" onClick={() => setNotificationsError(null)}>
-                Dismiss
-              </button>
-            </div>
-          ) : null}
           <nav className="mobile-section-nav" aria-label="Report sections">
             {sections.map((item) => (
               <button
