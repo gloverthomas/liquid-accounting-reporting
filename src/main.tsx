@@ -20,12 +20,14 @@ import {
   Share2,
   ShoppingBag,
   SlidersHorizontal,
+  Sparkles,
   TrendingUp,
   Users,
 } from "lucide-react";
 import { PostHogProvider } from "@posthog/react";
+import { AiAssistant } from "./components/AiAssistant";
 import { captureProductEvent, createPosthogClient } from "./analytics";
-import { signalNotificationsIncident } from "./demoSignal";
+import { signalAssistantIncident, signalNotificationsIncident } from "./demoSignal";
 import { initSentry, reportCrossAppUrlDrift, reportLegacyDeepLink, reportNotificationsFailure, Sentry } from "./sentry";
 import liquidLogo from "./media/liquid-logo.png";
 import liquidMark from "./media/liquid-mark.png";
@@ -243,6 +245,8 @@ function App() {
   const [expandedNav, setExpandedNav] = useState<string | null>("Reports");
   const [staleDeepLink, setStaleDeepLink] = useState<string | null>(null);
   const [helpMenuOpen, setHelpMenuOpen] = useState(false);
+  const [assistantOpen, setAssistantOpen] = useState(false);
+  const sidebarBeforeAssistantRef = useRef(false);
   const [notificationsError, setNotificationsError] = useState<string | null>(null);
   const [notificationsBusy, setNotificationsBusy] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
@@ -252,6 +256,28 @@ function App() {
   const toggleHelpMenu = useCallback(() => {
     setHelpMenuOpen((open) => !open);
     captureProductEvent(posthogClient, "product_navigation", { source: "reporting", section: "Dashboard" });
+  }, []);
+
+  const toggleAssistant = useCallback(() => {
+    setAssistantOpen((open) => {
+      const next = !open;
+      if (next) {
+        sidebarBeforeAssistantRef.current = sidebarCollapsed;
+        setSidebarCollapsed(true);
+      } else {
+        setSidebarCollapsed(sidebarBeforeAssistantRef.current);
+      }
+      return next;
+    });
+    captureProductEvent(posthogClient, "product_navigation", {
+      source: "reporting",
+      section: "AI Assistant",
+    });
+  }, [sidebarCollapsed]);
+
+  const closeAssistant = useCallback(() => {
+    setAssistantOpen(false);
+    setSidebarCollapsed(sidebarBeforeAssistantRef.current);
   }, []);
 
   const openBrokenNotifications = async () => {
@@ -535,6 +561,16 @@ function App() {
           </a>
           <div className="reporting-search"><Search size={17} /><span>Search</span><kbd>⌘ K</kbd></div>
           <div className="topbar-actions">
+            <button
+              className="ai-assistant-launch"
+              type="button"
+              aria-pressed={assistantOpen}
+              aria-controls="liquid-ai-assistant"
+              onClick={toggleAssistant}
+            >
+              <Sparkles size={15} aria-hidden="true" />
+              <span>AI Assistant</span>
+            </button>
             <button
               className="header-icon"
               type="button"
@@ -1036,6 +1072,18 @@ function App() {
           )}
         </section>
       </main>
+      <div id="liquid-ai-assistant">
+        <AiAssistant
+          open={assistantOpen}
+          onClose={closeAssistant}
+          contextLabel="Dashboard"
+          userName="Jordan"
+          broken
+          onBrokenFailure={() => {
+            void signalAssistantIncident({ surface: "header" });
+          }}
+        />
+      </div>
     </div>
   );
 }
