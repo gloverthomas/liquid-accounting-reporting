@@ -198,8 +198,7 @@ const catalogue = [
 
 const workspaceNav = [
   { label: "Dashboard", icon: LayoutDashboard, href: coreAppUrl },
-  // LIQ-8: Reporting still shows the older "New" label; Core uses "Create".
-  { label: "New", icon: Plus, href: coreAppUrl, create: true },
+  { label: "Create", icon: Plus, href: coreAppUrl, create: true },
   { label: "Sales", icon: ShoppingBag, href: `${coreAppUrl}#sales` },
   { label: "Purchases", icon: CreditCard, href: `${coreAppUrl}#purchases` },
   { label: "Banking", icon: Landmark, href: `${coreAppUrl}#banking` },
