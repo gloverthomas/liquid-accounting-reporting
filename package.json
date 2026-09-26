@@ -12,7 +12,7 @@
     "test:unit": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "test:e2e:proof": "playwright test e2e/help-proof.spec.ts e2e/deep-links.spec.ts e2e/status-pills.spec.ts"
+    "test:e2e:proof": "playwright test e2e/help-proof.spec.ts e2e/deep-links.spec.ts e2e/status-pills.spec.ts e2e/shell-parity.spec.ts"
   },
   "dependencies": {
     "@posthog/react": "^1.11.1",
