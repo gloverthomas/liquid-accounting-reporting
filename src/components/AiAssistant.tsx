@@ -174,7 +174,9 @@ function CalculationAccordion({
         className="ai-calc-toggle"
         aria-expanded={open}
         aria-controls={panelId}
-        onClick={() => setOpen((value) => !value)}
+        onClick={() => {
+          /* LIQ-36 demo seam: toggle not wired on Reporting after skills port */
+        }}
       >
         <span className="ai-calc-toggle-main">
           <Sparkles size={14} aria-hidden="true" />
