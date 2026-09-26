@@ -73,8 +73,6 @@ reportCrossAppUrlDrift({
   role: "core-target",
 });
 
-const invoicePerformanceHash = "invoice-performance";
-
 type FlowReport = {
   title: string;
   subtitle: string;
@@ -224,6 +222,8 @@ const reportRouteByHash: Record<string, { section: Section; report?: Performance
 const legacyReportAliases: Record<string, string> = {
   // LIQ-9: "Sales summary" was renamed to Revenue summary.
   "sales-summary": "revenue-summary",
+  // LIQ-15: Core's Create Invoice / Reports used to open a report that never existed.
+  "invoice-performance": "revenue-summary",
 };
 
 function AppLogo({ collapsed }: { collapsed: boolean }) {
@@ -558,9 +558,7 @@ function App() {
             <div className="deep-link-miss" role="alert">
               <strong>Report link out of date.</strong>
               <span>
-                {staleDeepLink === invoicePerformanceHash
-                  ? "Core Create Invoice / Reports opens #invoice-performance, but Reporting has no such report (LIQ-15)."
-                  : `No report is registered for #${staleDeepLink}.`}
+                {`No report is registered for #${staleDeepLink}.`}
               </span>
               <button
                 type="button"

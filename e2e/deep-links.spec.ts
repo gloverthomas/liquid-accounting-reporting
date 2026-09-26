@@ -8,6 +8,13 @@ test.describe("Report deep links", () => {
     await expect(page).toHaveURL(/#revenue-summary$/);
   });
 
+  test("old #invoice-performance links open Revenue summary without an error (LIQ-15)", async ({ page }) => {
+    await page.goto("/#invoice-performance");
+    await expect(page.getByRole("heading", { name: "Revenue summary" })).toBeVisible();
+    await expect(page.getByRole("alert")).toHaveCount(0);
+    await expect(page).toHaveURL(/#revenue-summary$/);
+  });
+
   test("canonical #revenue-summary opens the report", async ({ page }) => {
     await page.goto("/#revenue-summary");
     await expect(page.getByRole("heading", { name: "Revenue summary" })).toBeVisible();
