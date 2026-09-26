@@ -217,8 +217,14 @@ const reportRouteByHash: Record<string, { section: Section; report?: Performance
   all: { section: "all" },
 };
 
-/** Legacy Core deep link still used by liquid-accounting-core (LIQ-9). */
-const legacySalesSummaryHash = "sales-summary";
+/**
+ * Old report hashes that other apps (or bookmarks) may still open, mapped to
+ * the current report. They redirect silently instead of showing an error.
+ */
+const legacyReportAliases: Record<string, string> = {
+  // LIQ-9: "Sales summary" was renamed to Revenue summary.
+  "sales-summary": "revenue-summary",
+};
 
 function AppLogo({ collapsed }: { collapsed: boolean }) {
   return (
@@ -275,14 +281,13 @@ function App() {
         setStaleDeepLink(null);
         return;
       }
-      if (hash === legacySalesSummaryHash) {
-        // LIQ-9: Core still deep-links here after the rename to revenue-summary.
-        reportLegacyDeepLink(hash);
-        setStaleDeepLink(hash);
-        setSection("all");
-        return;
+      const alias = legacyReportAliases[hash];
+      if (alias) {
+        // Rewrite the URL so the address bar and back button show the current report.
+        window.history.replaceState({}, "", `${window.location.pathname}${window.location.search}#${alias}`);
       }
-      const matched = reportRouteByHash[hash];
+      const current = alias ?? hash;
+      const matched = reportRouteByHash[current];
       if (!matched) {
         reportLegacyDeepLink(hash);
         setStaleDeepLink(hash);
@@ -553,11 +558,9 @@ function App() {
             <div className="deep-link-miss" role="alert">
               <strong>Report link out of date.</strong>
               <span>
-                {staleDeepLink === legacySalesSummaryHash
-                  ? "Core still opens #sales-summary. This app renamed that report to Revenue summary (#revenue-summary)."
-                  : staleDeepLink === invoicePerformanceHash
-                    ? "Core Create Invoice / Reports opens #invoice-performance, but Reporting has no such report (LIQ-15)."
-                    : `No report is registered for #${staleDeepLink}.`}
+                {staleDeepLink === invoicePerformanceHash
+                  ? "Core Create Invoice / Reports opens #invoice-performance, but Reporting has no such report (LIQ-15)."
+                  : `No report is registered for #${staleDeepLink}.`}
               </span>
               <button
                 type="button"

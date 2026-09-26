@@ -12,9 +12,8 @@
     "test:unit": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "test:e2e:proof": "playwright test e2e/help-proof.spec.ts"
+    "test:e2e:proof": "playwright test e2e/help-proof.spec.ts e2e/deep-links.spec.ts"
   },
-
   "dependencies": {
     "@posthog/react": "^1.11.1",
     "@sentry/react": "^10.75.3",
