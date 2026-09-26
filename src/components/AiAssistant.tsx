@@ -54,6 +54,7 @@ type Props = {
   userName?: string;
   /** Reports each message's outcome (answered/failed) for usage analytics; never the message text. */
   onMessageOutcome?: (outcome: "answered" | "failed") => void;
+  onCalculationAccordionStuck?: () => void;
 };
 
 function newId() {
@@ -160,9 +161,11 @@ function AssistantMarkdown({ text }: { text: string }) {
 function CalculationAccordion({
   provider,
   rationale,
+  onStuckToggle,
 }: {
   provider?: string;
   rationale: string;
+  onStuckToggle?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
@@ -175,7 +178,8 @@ function CalculationAccordion({
         aria-expanded={open}
         aria-controls={panelId}
         onClick={() => {
-          /* LIQ-36 demo seam: toggle not wired on Reporting after skills port */
+          /* Demo seam: toggle not wired on Reporting after skills port */
+          onStuckToggle?.();
         }}
       >
         <span className="ai-calc-toggle-main">
@@ -203,6 +207,7 @@ export function AiAssistant({
   contextLabel = "Dashboard",
   userName = "Jordan",
   onMessageOutcome,
+  onCalculationAccordionStuck,
 }: Props) {
   const titleId = useId();
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -402,7 +407,11 @@ export function AiAssistant({
                       </button>
                     </div>
                     {message.rationale ? (
-                      <CalculationAccordion provider={message.provider} rationale={message.rationale} />
+                      <CalculationAccordion
+                        provider={message.provider}
+                        rationale={message.rationale}
+                        onStuckToggle={onCalculationAccordionStuck}
+                      />
                     ) : null}
                   </div>
                 )}
