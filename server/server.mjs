@@ -1,5 +1,10 @@
+/**
+ * Liquid Reporting BFF — loopback only. Report fixtures plus
+ * POST /api/v1/assistant/chat (Grok via xAI when XAI_API_KEY is set; else fixture).
+ */
 import { createServer } from "node:http";
 import { randomUUID, timingSafeEqual } from "node:crypto";
+import { answerAssistant } from "./assistant.mjs";
 
 const host = "127.0.0.1";
 const port = Number.parseInt(process.env.PORT ?? "4001", 10);
@@ -8,6 +13,9 @@ const expectedToken = process.env.LIQUID_BFF_DEMO_TOKEN;
 const requestsByIp = new Map();
 const rateLimitWindowMs = 60_000;
 const rateLimitMaxRequests = 120;
+const maxBodyBytes = 16 * 1024;
+const xaiApiKey = (process.env.XAI_API_KEY ?? "").trim();
+const xaiModel = (process.env.XAI_MODEL ?? "").trim() || "grok-4-fast-non-reasoning";
 
 if (!["development", "test"].includes(process.env.NODE_ENV)) {
   throw new Error("This synthetic BFF may only run with NODE_ENV set to development or test.");
@@ -55,6 +63,24 @@ function sendJson(response, statusCode, requestId, payload) {
   response.end(JSON.stringify({ requestId, ...payload }));
 }
 
+function readBody(request) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let total = 0;
+    request.on("data", (chunk) => {
+      total += chunk.length;
+      if (total > maxBodyBytes) {
+        reject(new Error("body_too_large"));
+        request.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+    request.on("end", () => resolve(Buffer.concat(chunks)));
+    request.on("error", reject);
+  });
+}
+
 function tokenMatches(authorization) {
   if (!authorization?.startsWith("Bearer ")) return false;
   const supplied = Buffer.from(authorization.slice(7));
@@ -74,7 +100,7 @@ function withinRateLimit(ip) {
   return true;
 }
 
-const server = createServer((request, response) => {
+const server = createServer(async (request, response) => {
   const requestId = randomUUID();
   const origin = request.headers.origin;
   const ip = request.socket.remoteAddress ?? "unknown";
@@ -88,7 +114,7 @@ const server = createServer((request, response) => {
   if (origin) response.setHeader("Access-Control-Allow-Origin", allowedOrigin);
   response.setHeader("Vary", "Origin");
   response.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type");
-  response.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  response.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
 
   if (!withinRateLimit(ip)) {
     sendJson(response, 429, requestId, { error: "rate_limit_exceeded" });
@@ -101,14 +127,34 @@ const server = createServer((request, response) => {
     return;
   }
 
-  if (request.method !== "GET") {
-    sendJson(response, 405, requestId, { error: "method_not_allowed" });
-    return;
-  }
-
   if (!tokenMatches(request.headers.authorization)) {
     console.info(JSON.stringify({ event: "authentication_failure", requestId, route: path }));
     sendJson(response, 401, requestId, { error: "unauthorized" });
+    return;
+  }
+
+  if (request.method === "POST" && path === "/api/v1/assistant/chat") {
+    let body;
+    try {
+      const raw = await readBody(request);
+      body = raw.length ? JSON.parse(raw.toString("utf8")) : {};
+    } catch {
+      sendJson(response, 400, requestId, { error: "invalid_body" });
+      return;
+    }
+    const { status, payload } = await answerAssistant(body, {
+      apiKey: xaiApiKey,
+      model: xaiModel,
+      onFallback: (err) =>
+        console.info(JSON.stringify({ event: "assistant_grok_fallback", requestId, error: err instanceof Error ? err.message.slice(0, 80) : "unknown" })),
+    });
+    console.info(JSON.stringify({ event: "assistant_chat", requestId, status, provider: payload.provider ?? null, hasKey: Boolean(xaiApiKey) }));
+    sendJson(response, status, requestId, payload);
+    return;
+  }
+
+  if (request.method !== "GET") {
+    sendJson(response, 405, requestId, { error: "method_not_allowed" });
     return;
   }
 
@@ -123,5 +169,5 @@ const server = createServer((request, response) => {
 });
 
 server.listen(port, host, () => {
-  console.info(JSON.stringify({ event: "server_started", service: "liquid-reporting-bff", host, port }));
+  console.info(JSON.stringify({ event: "server_started", service: "liquid-reporting-bff", host, port, assistant: xaiApiKey ? "grok" : "fixture" }));
 });

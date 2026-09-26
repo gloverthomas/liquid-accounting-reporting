@@ -38,14 +38,3 @@ export async function signalNotificationsIncident(args: {
   });
 }
 
-/** LIQ-24 — AI Assistant rail duplicated but BFF never wired in Reporting. */
-export async function signalAssistantIncident(args: {
-  surface: "header";
-}): Promise<{ ok: boolean; detail?: string }> {
-  return postSignal({
-    issueIdentifier: "LIQ-24",
-    title: "[Hero] AI Assistant works in Core but is dead in Reporting",
-    source: `assistant_${args.surface}`,
-    hash: "ai-assistant",
-  });
-}

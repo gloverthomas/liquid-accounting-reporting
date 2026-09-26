@@ -25,7 +25,6 @@ import {
 import { PostHogProvider } from "@posthog/react";
 import { AiAssistant } from "./components/AiAssistant";
 import { captureProductEvent, createPosthogClient } from "./analytics";
-import { signalAssistantIncident } from "./demoSignal";
 import { initSentry, reportCrossAppUrlDrift, reportLegacyDeepLink, Sentry } from "./sentry";
 import liquidLogo from "./media/liquid-logo.png";
 import liquidMark from "./media/liquid-mark.png";
@@ -980,10 +979,6 @@ function App() {
           contextLabel="Dashboard"
           userName="Jordan"
           onMessageOutcome={(outcome) => captureProductEvent(posthogClient, "assistant_message_sent", { source: "reporting", outcome })}
-          broken
-          onBrokenFailure={() => {
-            void signalAssistantIncident({ surface: "header" });
-          }}
         />
       </div>
         </div>
