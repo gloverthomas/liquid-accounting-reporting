@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { initBotId } from "botid/client/core";
 import { createRoot } from "react-dom/client";
 import {
   ArrowLeft,
@@ -987,6 +988,9 @@ function App() {
     </div>
   );
 }
+
+// Vercel BotID: the assistant endpoint only spends the xAI key for verified browsers.
+initBotId({ protect: [{ path: "/api/v1/assistant/chat", method: "POST" }] });
 
 createRoot(document.getElementById("root")!).render(
   <Sentry.ErrorBoundary fallback={<p>Something went wrong loading Liquid Reporting.</p>}>
