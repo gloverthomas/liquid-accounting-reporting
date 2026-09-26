@@ -433,7 +433,7 @@ function App() {
         <button
           className="collapse-button"
           type="button"
-          aria-label="Toggle menu"
+          aria-label={sidebarCollapsed ? "Expand navigation" : "Collapse navigation"}
           onClick={() => setSidebarCollapsed((collapsed) => !collapsed)}
         >
           {sidebarCollapsed ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}

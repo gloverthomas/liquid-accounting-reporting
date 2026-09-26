@@ -11,3 +11,12 @@ test("primary navigation matches Core's labels and order (LIQ-8)", async ({ page
   const labels = (await nav.locator(".sidebar-label").allTextContents()).map((t) => t.trim());
   expect(labels.filter((t) => CORE_NAV.includes(t))).toEqual(CORE_NAV);
 });
+
+test("sidebar collapse control has Core's accessible names (LIQ-5)", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("button", { name: "Toggle menu" })).toHaveCount(0);
+  const collapse = page.getByRole("button", { name: "Collapse navigation" });
+  await expect(collapse).toBeVisible();
+  await collapse.click();
+  await expect(page.getByRole("button", { name: "Expand navigation" })).toBeVisible();
+});
