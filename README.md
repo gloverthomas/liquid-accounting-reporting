@@ -71,3 +71,7 @@ It is designed to contrast with the canonical `Accounting-core` UI so the Cursor
 - a separate component and report-routing model;
 - duplicated financial visualisation patterns;
 - different report UI conventions that require a plan before migration.
+
+## Why it's built this way
+
+Decision records: [`docs/decisions/`](docs/decisions/README.md).
