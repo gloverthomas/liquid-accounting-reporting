@@ -42,3 +42,20 @@ describe("Reporting assistant endpoint (LIQ-24)", () => {
     expect(onFallback).toHaveBeenCalled();
   });
 });
+
+describe("Grok spend", () => {
+  it("makes one Grok call when it times out or 5xxs (no JSON-mode retry)", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 503, json: async () => ({}) });
+    vi.stubGlobal("fetch", fetchMock);
+    await answerAssistant({ message: "margin?" }, { apiKey: "xai-test" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses fixtures when the budget says no", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const { payload } = await answerAssistant({ message: "margin?" }, { apiKey: "xai-test", allowGrok: () => false });
+    expect(payload.provider).toBe("fixture");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});

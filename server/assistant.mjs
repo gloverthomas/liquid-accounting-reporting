@@ -175,7 +175,9 @@ Respond with ONLY valid JSON (no markdown fences) using this shape:
   let content;
   try {
     content = await complete(true);
-  } catch {
+  } catch (error) {
+    // Retry without JSON mode only when the model rejects it; timeouts/5xx don't double the spend.
+    if (!(error instanceof Error && /^xai_(400|422)$/.test(error.message))) throw error;
     content = await complete(false);
   }
   const parsed = parseGrokPayload(content, message);
@@ -189,11 +191,11 @@ Respond with ONLY valid JSON (no markdown fences) using this shape:
 }
 
 /** Returns { status, payload } for a parsed request body. Never throws. */
-export async function answerAssistant(body, { apiKey = "", model = "grok-4-fast-non-reasoning", onFallback } = {}) {
+export async function answerAssistant(body, { apiKey = "", model = "grok-4-fast-non-reasoning", onFallback, allowGrok = () => true } = {}) {
   const message = String(body?.message ?? "").trim();
   if (!message) return { status: 400, payload: { error: "message_required" } };
   if (message.length > MAX_MESSAGE_CHARS) return { status: 400, payload: { error: "message_too_long" } };
-  if (!apiKey) return { status: 200, payload: fixtureAssistantReply(message) };
+  if (!apiKey || !allowGrok()) return { status: 200, payload: fixtureAssistantReply(message) };
   try {
     return { status: 200, payload: await callGrok({ message, context: body.context, history: body.history }, { apiKey, model }) };
   } catch (error) {
