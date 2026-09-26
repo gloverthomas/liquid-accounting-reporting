@@ -14,6 +14,7 @@ const allowedEvents = new Set([
   "report_opened",
   "bff_status",
   "assistant_message_sent",
+  "assistant_calculation_accordion_stuck",
   "create_dialog_opened",
 ]);
 
@@ -118,9 +119,17 @@ export function createPosthogClient(app: "core" | "reporting"): PostHog | null {
   return posthog;
 }
 
+export type PostHogLike = Pick<PostHog, "capture">;
+
 export function captureProductEvent(
-  client: PostHog | null,
-  event: "product_navigation" | "report_opened" | "bff_status" | "create_dialog_opened" | "assistant_message_sent",
+  client: PostHogLike | null,
+  event:
+    | "product_navigation"
+    | "report_opened"
+    | "bff_status"
+    | "create_dialog_opened"
+    | "assistant_message_sent"
+    | "assistant_calculation_accordion_stuck",
   properties?: Record<string, Property>,
 ): CaptureResult | undefined {
   return client?.capture(event, sanitiseProperties(properties));
