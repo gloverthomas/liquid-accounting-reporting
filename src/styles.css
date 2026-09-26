@@ -202,21 +202,13 @@ kbd { margin-left: auto; border: 1px solid #e5e7eb; border-radius: 4px; color: #
 .positive { color: #13814e !important; }
 .negative { color: #c62429 !important; }
 
-/* LIQ-7: forked status treatment — squared .chip vs Core's pill .status */
-.chip {
-  display: inline-flex;
-  margin-left: 8px;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 10px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  vertical-align: middle;
-}
-.chip-ok { background: #e8f5ee; color: #0f6b3f; }
-.chip-warn { background: #fff4d6; color: #8a5b00; }
-.chip-bad { background: #fde8e8; color: #c62429; }
+/* Status pills: the same values as Core's src/styles.css (.status). Keep them in sync. */
+.status { display: inline-flex; align-items: center; border-radius: 999px; background: #f2f4f5; color: #374151; padding: 4px 10px; font-size: 11px; font-weight: 600; letter-spacing: 0.01em; }
+.status-overdue { background: #fff0f0; color: #ff292e; }
+.status-sent { background: #eef6f1; color: #13814e; }
+.status-awaiting { background: #fff7e8; color: #9a6700; }
+/* Layout only: the pill sits after the account name in report tables. */
+.report-table-card td .status { margin-left: 8px; vertical-align: middle; }
 
 .deep-link-miss {
   display: flex;

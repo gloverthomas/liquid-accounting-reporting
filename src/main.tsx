@@ -44,8 +44,9 @@ type TableRow = {
   right: string;
   net: string;
   tone?: "positive" | "negative";
-  chip?: string;
-  chipTone?: "ok" | "warn" | "bad";
+  /** Status pill, using Core's canonical `.status` states. */
+  status?: string;
+  statusTone?: "sent" | "awaiting" | "overdue";
 };
 
 const defaultCoreAppUrl = "http://localhost:3000";
@@ -155,12 +156,12 @@ const performanceReports: Record<PerformanceReport, FlowReport> = {
     headline: "Invoiced this period",
     chartTitle: "Invoiced and paid",
     rows: [
-      { account: "Hamilton Studio", left: "$38,880.00", right: "$32,400.00", net: "$6,480.00", chip: "Open", chipTone: "warn" },
-      { account: "Northline Architecture", left: "$36,720.00", right: "$31,310.00", net: "$5,410.00", chip: "Overdue", chipTone: "bad" },
-      { account: "Aster Coffee Roasters", left: "$28,790.00", right: "$26,915.00", net: "$1,875.00", chip: "Open", chipTone: "warn" },
+      { account: "Hamilton Studio", left: "$38,880.00", right: "$32,400.00", net: "$6,480.00", status: "Open", statusTone: "awaiting" },
+      { account: "Northline Architecture", left: "$36,720.00", right: "$31,310.00", net: "$5,410.00", status: "Overdue", statusTone: "overdue" },
+      { account: "Aster Coffee Roasters", left: "$28,790.00", right: "$26,915.00", net: "$1,875.00", status: "Open", statusTone: "awaiting" },
       { account: "This period outstanding", left: "$104,390.00", right: "$90,625.00", net: "$13,765.00" },
       { account: "Prior period outstanding", left: "—", right: "—", net: "$24,653.00" },
-      { account: "Accounts receivable", left: "—", right: "—", net: "$38,418.00", tone: "positive", chip: "Settled mix", chipTone: "ok" },
+      { account: "Accounts receivable", left: "—", right: "—", net: "$38,418.00", tone: "positive", status: "Settled mix", statusTone: "sent" },
     ],
   },
 };
@@ -729,8 +730,8 @@ function App() {
                       <tr key={row.account} className={index === currentPerformance.rows.length - 1 ? "total-row" : ""}>
                         <td>
                           <strong>{row.account}</strong>
-                          {row.chip ? (
-                            <span className={`chip chip-${row.chipTone ?? "ok"}`}>{row.chip}</span>
+                          {row.status ? (
+                            <span className={`status${row.statusTone ? ` status-${row.statusTone}` : ""}`}>{row.status}</span>
                           ) : null}
                         </td>
                         <td>{row.left}</td>
