@@ -38,7 +38,6 @@ button:focus-visible, a:focus-visible { outline: 3px solid #ff292e; outline-offs
 .collapse-button:hover { background: #b91c21; }
 .header-icon { position: relative; display: inline-grid; width: 32px; height: 32px; place-items: center; border: 0; border-radius: 8px; background: transparent; color: #626975; }
 .header-icon:hover { background: #f5f6f8; }
-.notification-dot { position: absolute; top: 6px; right: 6px; width: 6px; height: 6px; border: 1.5px solid #fff; border-radius: 50%; background: #ff292e; }
 .help-button { display: flex; align-items: center; gap: 6px; border: 0; border-radius: 8px; background: transparent; color: #626975; padding: 7px 8px; font-size: 12px; }
 .help-button:hover { background: #f5f6f8; color: #111827; }
 .help-menu { position: relative; }
