@@ -18,16 +18,12 @@ export function reportAssistantCalculationAccordionStuck(posthog: PostHogLike | 
   if (accordionSignalSent) return;
   accordionSignalSent = true;
 
-  const signalUrl = import.meta.env.VITE_WORKFLOW_SIGNAL_URL?.trim();
-  if (!signalUrl) return;
-
-  void fetch(signalUrl, {
+  void fetch("/api/v1/product/signal", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
       hash: ASSISTANT_CALC_ACCORDION_SEAM,
       source: "reporting:ai-assistant",
-      title: 'Reporting AI Assistant: "How this was calculated" accordion does not expand',
       reportingUrl: window.location.href,
     }),
   }).catch(() => {
