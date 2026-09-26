@@ -35,6 +35,7 @@ The BFF has synthetic endpoints for:
 - `GET /api/v1/organisation`
 - `GET /api/v1/reports/profit-loss`
 - `GET /api/v1/reports/cash-flow`
+- `POST /api/v1/assistant/chat`: the AI Assistant, the same contract as Core's. It uses Grok when `XAI_API_KEY` is set and demo fixtures otherwise. It's also deployed as a Vercel function (`api/v1/assistant/chat.js`); both share `server/assistant.mjs`.
 
 `/api/v1/organisation` intentionally duplicates the Core BFF contract (Linear LIQ-12). It is the first candidate the later SDK convergence workflow should identify and classify; report read models are intentionally retained as Reporting-specific for the pilot. Do not invent a shared BFF yet.
 

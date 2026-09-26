@@ -94,25 +94,7 @@ describe("AiAssistant", () => {
     expect(within(related).getByRole("button", { name: /What drove the increase\?/i })).toBeInTheDocument();
   });
 
-  it("shows the intentional BFF miss and notifies triage when broken", async () => {
-    const user = userEvent.setup();
-    const fetchMock = vi.fn();
-    const onBrokenFailure = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
-
-    render(<AiAssistant open onClose={() => undefined} broken onBrokenFailure={onBrokenFailure} />);
-    await user.click(
-      screen.getByRole("button", { name: /How does this quarter compare to last\?/i }),
-    );
-
-    const alert = await screen.findByRole("alert", {}, { timeout: 3000 });
-    expect(alert).toHaveTextContent(/never wired on this BFF/i);
-    expect(onBrokenFailure).toHaveBeenCalledWith(expect.stringMatching(/never wired on this BFF/i));
-    expect(fetchMock).not.toHaveBeenCalled();
-    expect(screen.getByRole("complementary")).toHaveAttribute("data-broken", "true");
-  });
-
-  it("surfaces API failures as an alert when the BFF is wired", async () => {
+  it("surfaces API failures as an alert", async () => {
     const user = userEvent.setup();
     vi.stubGlobal(
       "fetch",
@@ -155,14 +137,5 @@ describe("AiAssistant", () => {
       await vi.waitFor(() => expect(onMessageOutcome).toHaveBeenCalledWith("failed"));
       expect(onMessageOutcome).not.toHaveBeenCalledWith("answered");
     });
-
-    it("reports 'failed' for the intentional broken rail, without calling the BFF", async () => {
-      const fetchMock = vi.fn();
-      vi.stubGlobal("fetch", fetchMock);
-      const onMessageOutcome = await ask({ broken: true });
-      await vi.waitFor(() => expect(onMessageOutcome).toHaveBeenCalledWith("failed"));
-      expect(fetchMock).not.toHaveBeenCalled();
-    });
   });
 });
-

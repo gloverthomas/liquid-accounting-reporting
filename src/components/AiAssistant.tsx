@@ -51,11 +51,7 @@ type Props = {
   open: boolean;
   onClose: () => void;
   contextLabel?: string;
-  /** When true, mimics a skills-ported shell with a missing BFF (LIQ-24 demo defect). */
-  broken?: boolean;
   userName?: string;
-  /** Fired when the intentional Reporting defect surfaces (for /signal triage). */
-  onBrokenFailure?: (message: string) => void;
   /** Reports each message's outcome (answered/failed) for usage analytics; never the message text. */
   onMessageOutcome?: (outcome: "answered" | "failed") => void;
 };
@@ -203,10 +199,8 @@ export function AiAssistant({
   open,
   onClose,
   contextLabel = "Dashboard",
-  broken = false,
   userName = "Jordan",
   onMessageOutcome,
-  onBrokenFailure,
 }: Props) {
   const titleId = useId();
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -256,17 +250,6 @@ export function AiAssistant({
       setMessages((prev) => [...prev, userMsg]);
       setBusy(true);
 
-      if (broken) {
-        onMessageOutcome?.("failed");
-        await new Promise((r) => setTimeout(r, 450));
-        setBusy(false);
-        const failure =
-          "Assistant service unavailable in Reporting. The AI rail was ported from Core, but /api/v1/assistant/chat was never wired on this BFF.";
-        setError(failure);
-        onBrokenFailure?.(failure);
-        return;
-      }
-
       try {
         const res = await fetch("/api/v1/assistant/chat", {
           method: "POST",
@@ -311,7 +294,7 @@ export function AiAssistant({
         setBusy(false);
       }
     },
-    [busy, broken, context, messages, onBrokenFailure, onMessageOutcome],
+    [busy, context, messages, onMessageOutcome],
   );
 
   if (!open) return null;
@@ -323,7 +306,6 @@ export function AiAssistant({
       className="ai-assistant"
       role="complementary"
       aria-labelledby={titleId}
-      data-broken={broken ? "true" : "false"}
     >
       <header className="ai-assistant-header">
         <div className="ai-assistant-title">
