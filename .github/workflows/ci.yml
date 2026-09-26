@@ -138,3 +138,12 @@ jobs:
           </details>
           "
           gh pr comment "${{ github.event.pull_request.number }}" --body "$BODY" || true
+      - name: Post visual proof to Linear issues
+        if: github.event_name == 'pull_request' && always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PROOF_DIR: docs/pr-proof
+          JOB_LABEL: help-proof
+        run: node scripts/post-linear-visual-proof.mjs
