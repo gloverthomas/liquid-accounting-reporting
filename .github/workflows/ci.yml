@@ -37,9 +37,15 @@ jobs:
   help-proof:
     runs-on: ubuntu-latest
     needs: build
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
 
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -66,15 +72,68 @@ jobs:
           name: help-proof
           path: e2e/proof/*.png
           if-no-files-found: warn
-      - name: Comment proof on PR
+      # Proof images live on a side branch so the PR head (and its required checks) never moves.
+      - name: Publish proof images to pr-proof branch
+        id: proof
         if: github.event_name == 'pull_request' && always()
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(e2e/proof/*.png)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No proof PNGs to publish."
+            exit 0
+          fi
+          branch="pr-proof/pr-${{ github.event.pull_request.number }}"
+          dir="$(mktemp -d)"
+          cp "${files[@]}" "$dir/"
+          cd "$dir"
+          git init -q -b "$branch"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -q -m "chore(ci): visual proof for PR #${{ github.event.pull_request.number }} (run ${{ github.run_id }})"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" "HEAD:refs/heads/${branch}"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Comment proof on PR (inline images)
+        if: github.event_name == 'pull_request' && always() && steps.proof.outputs.sha != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(e2e/proof/*.png)
+          BASE="https://raw.githubusercontent.com/${{ github.repository }}/${{ steps.proof.outputs.sha }}"
           BODY="## Visual proof (Playwright)
-          Help screenshots are attached as artifact **help-proof**.
-          Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-          Embed \`docs/pr-proof/*.png\` in the PR description for inline images.
+          CI run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          Screenshots below are published to branch \`pr-proof/pr-${{ github.event.pull_request.number }}\` so you can review without downloading the **help-proof** artifact zip.
+
+          "
+          for f in "${files[@]}"; do
+            name="$(basename "$f")"
+            BODY="${BODY}
+          ### ${name}
+          ![${name}](${BASE}/${name})
+          "
+          done
+          BODY="${BODY}
+          <details>
+          <summary>Artifact backup</summary>
+
+          If images fail to load, download artifact **help-proof** from the CI run above.
+          </details>
           "
           gh pr comment "${{ github.event.pull_request.number }}" --body "$BODY" || true
+      - name: Post visual proof to Linear issues
+        if: github.event_name == 'pull_request' && always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PROOF_DIR: e2e/proof
+          JOB_LABEL: help-proof
+        run: node scripts/post-linear-visual-proof.mjs
