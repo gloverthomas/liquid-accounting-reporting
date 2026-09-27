@@ -84,12 +84,22 @@ function normalizeTable(table: unknown): AssistantTable | null {
   };
 }
 
+const MAX_RELATED_CHARS = 500;
+
 function normalizeRelated(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
-  return value
-    .map((item) => String(item ?? "").trim())
-    .filter(Boolean)
-    .slice(0, 3);
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const item of value) {
+    const text = String(item ?? "")
+      .trim()
+      .slice(0, MAX_RELATED_CHARS);
+    if (!text || seen.has(text)) continue;
+    seen.add(text);
+    out.push(text);
+    if (out.length >= 3) break;
+  }
+  return out;
 }
 
 /** Lightweight safe markdown: paragraphs, numbered/bulleted lists, **bold**. */
@@ -230,15 +240,26 @@ export function AiAssistant({
     scrollerRef.current?.scrollTo({ top: scrollerRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, busy, error]);
 
-  const relatedQuestions = useMemo(() => {
-    if (messages.length === 0) return WELCOME_SUGGESTIONS;
-    // Demo seam: after a reply, follow-up chips fail to render.
-    // Core still renders relatedQuestions from the assistant reply.
-    return [];
+  const footerChips = useMemo(() => {
+    if (messages.length === 0) {
+      return { mode: "welcome" as const, questions: WELCOME_SUGGESTIONS };
+    }
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+      const message = messages[index];
+      if (message.role === "assistant") {
+        const questions = message.relatedQuestions ?? [];
+        return { mode: "related" as const, questions };
+      }
+    }
+    return { mode: "welcome" as const, questions: WELCOME_SUGGESTIONS };
   }, [messages]);
 
   const hasAssistantReply = messages.some((message) => message.role === "assistant");
-  const relatedQuestionsFailed = hasAssistantReply && !busy && relatedQuestions.length === 0;
+  const relatedQuestionsFailed =
+    hasAssistantReply &&
+    !busy &&
+    footerChips.mode === "related" &&
+    footerChips.questions.length === 0;
 
   useEffect(() => {
     if (!relatedQuestionsFailed) return;
@@ -426,12 +447,21 @@ export function AiAssistant({
 
       <footer className="ai-assistant-footer">
         {relatedQuestionsFailed ? (
-          <p className="ai-error" role="alert">Related questions failed to render.</p>
+          <p className="ai-error" role="alert">
+            Related questions failed to render.
+          </p>
         ) : null}
-        {!busy && relatedQuestions.length > 0 ? (
-          <div className="ai-related" aria-label={empty ? "Suggested questions" : "Related questions"}>
-            {relatedQuestions.map((question) => (
-              <button key={question} type="button" onClick={() => void send(question)}>
+        {!busy && footerChips.questions.length > 0 ? (
+          <div
+            className="ai-related"
+            aria-label={footerChips.mode === "welcome" ? "Suggested questions" : "Related questions"}
+          >
+            {footerChips.questions.map((question, index) => (
+              <button
+                key={`${footerChips.mode}-${index}-${question.slice(0, 32)}`}
+                type="button"
+                onClick={() => void send(question)}
+              >
                 <CornerDownRight size={14} aria-hidden="true" />
                 <span>{question}</span>
               </button>
