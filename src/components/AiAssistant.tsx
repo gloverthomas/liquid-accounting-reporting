@@ -14,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import liquidMark from "../assets/liquid-mark.png";
+import { reportAssistantRelatedQuestionsFailed } from "../productSignal";
 
 export type AssistantTable = {
   headers: string[];
@@ -231,10 +232,18 @@ export function AiAssistant({
 
   const relatedQuestions = useMemo(() => {
     if (messages.length === 0) return WELCOME_SUGGESTIONS;
-    // LIQ-38 demo seam: follow-up chips were not ported with the rail.
+    // Demo seam: after a reply, follow-up chips fail to render.
     // Core still renders relatedQuestions from the assistant reply.
     return [];
   }, [messages]);
+
+  const hasAssistantReply = messages.some((message) => message.role === "assistant");
+  const relatedQuestionsFailed = hasAssistantReply && !busy && relatedQuestions.length === 0;
+
+  useEffect(() => {
+    if (!relatedQuestionsFailed) return;
+    reportAssistantRelatedQuestionsFailed(null);
+  }, [relatedQuestionsFailed]);
 
   const send = useCallback(
     async (text: string) => {
@@ -416,6 +425,9 @@ export function AiAssistant({
       </div>
 
       <footer className="ai-assistant-footer">
+        {relatedQuestionsFailed ? (
+          <p className="ai-error" role="alert">Related questions failed to render.</p>
+        ) : null}
         {!busy && relatedQuestions.length > 0 ? (
           <div className="ai-related" aria-label={empty ? "Suggested questions" : "Related questions"}>
             {relatedQuestions.map((question) => (

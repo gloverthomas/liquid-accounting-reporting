@@ -2,6 +2,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AiAssistant } from "./AiAssistant";
+import { resetProductSignalsForTests } from "../productSignal";
 
 function mockChatOk(overrides: Record<string, unknown> = {}) {
   return vi.fn().mockResolvedValue({
@@ -25,6 +26,7 @@ function mockChatOk(overrides: Record<string, unknown> = {}) {
 
 describe("AiAssistant", () => {
   beforeEach(() => {
+    resetProductSignalsForTests();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
@@ -83,9 +85,10 @@ describe("AiAssistant", () => {
     );
   });
 
-  it("drops related questions after a reply (LIQ-38)", async () => {
+  it("shows a render error and files a product signal when related questions fail", async () => {
     const user = userEvent.setup();
-    vi.stubGlobal("fetch", mockChatOk());
+    const fetchMock = mockChatOk();
+    vi.stubGlobal("fetch", fetchMock);
 
     render(<AiAssistant open onClose={() => undefined} />);
     await user.click(
@@ -93,11 +96,18 @@ describe("AiAssistant", () => {
     );
     await screen.findByText(/Income is up versus last quarter/i);
 
+    expect(screen.getByRole("alert")).toHaveTextContent(/related questions failed to render/i);
     expect(screen.queryByLabelText(/Related questions/i)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /What drove the increase\?/i })).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /How does this quarter compare to last\?/i }),
     ).not.toBeInTheDocument();
+
+    const signalCall = fetchMock.mock.calls.find((call) => call[0] === "/api/v1/product/signal");
+    expect(signalCall).toBeTruthy();
+    const body = JSON.parse(String((signalCall?.[1] as RequestInit).body));
+    expect(body.hash).toBe("assistant-related-questions");
+    expect(body.source).toBe("reporting:ai-assistant");
   });
 
   it("surfaces API failures as an alert", async () => {
