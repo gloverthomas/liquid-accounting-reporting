@@ -14,7 +14,7 @@ import {
   X,
 } from "lucide-react";
 import liquidMark from "../assets/liquid-mark.png";
-import { reportAssistantRelatedQuestionsFailed } from "../productSignal";
+import { reportAssistantNewChatFailed, reportAssistantRelatedQuestionsFailed } from "../productSignal";
 
 export type AssistantTable = {
   headers: string[];
@@ -221,6 +221,7 @@ export function AiAssistant({
   const [busy, setBusy] = useState(false);
   const [context, setContext] = useState(contextLabel);
   const [error, setError] = useState<string | null>(null);
+  const [newChatFailed, setNewChatFailed] = useState(false);
 
   useEffect(() => {
     setContext(contextLabel);
@@ -265,6 +266,11 @@ export function AiAssistant({
     if (!relatedQuestionsFailed) return;
     reportAssistantRelatedQuestionsFailed(null);
   }, [relatedQuestionsFailed]);
+
+  useEffect(() => {
+    if (!newChatFailed) return;
+    reportAssistantNewChatFailed(null);
+  }, [newChatFailed]);
 
   const send = useCallback(
     async (text: string) => {
@@ -348,8 +354,8 @@ export function AiAssistant({
             className="ai-icon-btn"
             aria-label="New chat"
             onClick={() => {
-              setMessages([]);
-              setError(null);
+              if (messages.length === 0) return;
+              setNewChatFailed(true);
             }}
           >
             <Plus size={16} />
@@ -364,6 +370,9 @@ export function AiAssistant({
       </header>
 
       <div className="ai-assistant-body" ref={scrollerRef}>
+        {newChatFailed ? (
+          <p className="ai-error" role="alert">New chat failed to start.</p>
+        ) : null}
         {empty ? (
           <div className="ai-assistant-welcome">
             <img className="ai-welcome-mark" src={liquidMark} alt="" width={40} height={40} />

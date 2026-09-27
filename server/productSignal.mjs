@@ -4,6 +4,7 @@ const TODO_STATE_ID = (process.env.LINEAR_TODO_STATE_ID ?? "84569319-0517-4fd2-b
 
 export const ASSISTANT_CALC_ACCORDION_SEAM = "assistant-calculation-accordion";
 export const ASSISTANT_RELATED_QUESTIONS_SEAM = "assistant-related-questions";
+export const ASSISTANT_NEW_CHAT_SEAM = "assistant-new-chat";
 
 const SEAMS = {
   [ASSISTANT_CALC_ACCORDION_SEAM]: {
@@ -15,6 +16,11 @@ const SEAMS = {
     title: "Reporting AI Assistant: related questions failed to render",
     description:
       "After a reply, Reporting shows an error: **related questions failed to render**. The follow-up chips do not appear. Core still renders related questions from the assistant reply. Welcome chips still show on an empty thread. Send still works. Do not reopen the dead-send path.",
+  },
+  [ASSISTANT_NEW_CHAT_SEAM]: {
+    title: "Reporting AI Assistant: New chat failed to start",
+    description:
+      "After a reply, **New chat** in the Reporting assistant header does not clear the thread. The rail shows **New chat failed to start**. Core still clears the thread with New chat and returns to the welcome. Send still works. An empty thread does not file this signal. Do not pre-create the Linear ticket.",
   },
 };
 
