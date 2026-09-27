@@ -14,7 +14,7 @@ import {
   X,
 } from "lucide-react";
 import liquidMark from "../assets/liquid-mark.png";
-import { reportAssistantNewChatFailed, reportAssistantRelatedQuestionsFailed } from "../productSignal";
+import { reportAssistantRelatedQuestionsFailed } from "../productSignal";
 
 export type AssistantTable = {
   headers: string[];
@@ -216,12 +216,12 @@ export function AiAssistant({
   const titleId = useId();
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const scrollerRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const [messages, setMessages] = useState<AssistantMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [context, setContext] = useState(contextLabel);
   const [error, setError] = useState<string | null>(null);
-  const [newChatFailed, setNewChatFailed] = useState(false);
 
   useEffect(() => {
     setContext(contextLabel);
@@ -267,11 +267,6 @@ export function AiAssistant({
     reportAssistantRelatedQuestionsFailed(null);
   }, [relatedQuestionsFailed]);
 
-  useEffect(() => {
-    if (!newChatFailed) return;
-    reportAssistantNewChatFailed(null);
-  }, [newChatFailed]);
-
   const send = useCallback(
     async (text: string) => {
       const trimmed = text.trim();
@@ -282,6 +277,8 @@ export function AiAssistant({
       setMessages((prev) => [...prev, userMsg]);
       setBusy(true);
 
+      abortControllerRef.current = new AbortController();
+
       try {
         const res = await fetch("/api/v1/assistant/chat", {
           method: "POST",
@@ -291,6 +288,7 @@ export function AiAssistant({
             context,
             history: messages.slice(-6).map((m) => ({ role: m.role, content: m.text })),
           }),
+          signal: abortControllerRef.current.signal,
         });
         const data = (await res.json()) as ChatResponse;
         if (!res.ok) {
@@ -320,10 +318,14 @@ export function AiAssistant({
         ]);
         onMessageOutcome?.("answered");
       } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") {
+          return;
+        }
         onMessageOutcome?.("failed");
         setError(err instanceof Error ? err.message : "assistant_failed");
       } finally {
         setBusy(false);
+        abortControllerRef.current = null;
       }
     },
     [busy, context, messages, onMessageOutcome],
@@ -354,8 +356,11 @@ export function AiAssistant({
             className="ai-icon-btn"
             aria-label="New chat"
             onClick={() => {
-              if (messages.length === 0) return;
-              setNewChatFailed(true);
+              abortControllerRef.current?.abort();
+              abortControllerRef.current = null;
+              setMessages([]);
+              setError(null);
+              setBusy(false);
             }}
           >
             <Plus size={16} />
@@ -370,9 +375,6 @@ export function AiAssistant({
       </header>
 
       <div className="ai-assistant-body" ref={scrollerRef}>
-        {newChatFailed ? (
-          <p className="ai-error" role="alert">New chat failed to start.</p>
-        ) : null}
         {empty ? (
           <div className="ai-assistant-welcome">
             <img className="ai-welcome-mark" src={liquidMark} alt="" width={40} height={40} />

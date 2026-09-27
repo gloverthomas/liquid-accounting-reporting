@@ -102,7 +102,7 @@ describe("AiAssistant", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("keeps the thread and files a product signal when New chat fails", async () => {
+  it("clears the thread with New chat", async () => {
     const user = userEvent.setup();
     const fetchMock = mockChatOk();
     vi.stubGlobal("fetch", fetchMock);
@@ -118,15 +118,8 @@ describe("AiAssistant", () => {
     await screen.findByText(/Income is up versus last quarter/i);
 
     await user.click(screen.getByRole("button", { name: /New chat/i }));
-    expect(screen.getByRole("alert")).toHaveTextContent(/new chat failed to start/i);
-    expect(screen.getByText(/Income is up versus last quarter/i)).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: /Hello Jordan/i })).not.toBeInTheDocument();
-
-    const signalCall = fetchMock.mock.calls.find((call) => call[0] === "/api/v1/product/signal");
-    expect(signalCall).toBeTruthy();
-    const body = JSON.parse(String((signalCall?.[1] as RequestInit).body));
-    expect(body.hash).toBe("assistant-new-chat");
-    expect(body.source).toBe("reporting:ai-assistant");
+    expect(screen.getByRole("heading", { name: /Hello Jordan/i })).toBeInTheDocument();
+    expect(screen.queryByText(/Income is up versus last quarter/i)).not.toBeInTheDocument();
   });
 
   it("shows a render error and files a product signal when related questions fail", async () => {
