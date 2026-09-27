@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AiAssistant } from "./AiAssistant";
@@ -85,9 +85,26 @@ describe("AiAssistant", () => {
     );
   });
 
+  it("replaces welcome chips with related questions after a reply", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", mockChatOk());
+
+    render(<AiAssistant open onClose={() => undefined} />);
+    await user.click(
+      screen.getByRole("button", { name: /How does this quarter compare to last\?/i }),
+    );
+    await screen.findByText(/Income is up versus last quarter/i);
+
+    const related = screen.getByLabelText(/Related questions/i);
+    expect(within(related).getByRole("button", { name: /What drove the increase\?/i })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /How does this quarter compare to last\?/i }),
+    ).not.toBeInTheDocument();
+  });
+
   it("shows a render error and files a product signal when related questions fail", async () => {
     const user = userEvent.setup();
-    const fetchMock = mockChatOk();
+    const fetchMock = mockChatOk({ relatedQuestions: [] });
     vi.stubGlobal("fetch", fetchMock);
 
     render(<AiAssistant open onClose={() => undefined} />);
