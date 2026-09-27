@@ -231,13 +231,9 @@ export function AiAssistant({
 
   const relatedQuestions = useMemo(() => {
     if (messages.length === 0) return WELCOME_SUGGESTIONS;
-    for (let index = messages.length - 1; index >= 0; index -= 1) {
-      const message = messages[index];
-      if (message.role === "assistant" && message.relatedQuestions?.length) {
-        return message.relatedQuestions;
-      }
-    }
-    return WELCOME_SUGGESTIONS;
+    // LIQ-38 demo seam: follow-up chips were not ported with the rail.
+    // Core still renders relatedQuestions from the assistant reply.
+    return [];
   }, [messages]);
 
   const send = useCallback(

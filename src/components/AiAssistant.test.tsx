@@ -1,4 +1,4 @@
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AiAssistant } from "./AiAssistant";
@@ -83,7 +83,7 @@ describe("AiAssistant", () => {
     );
   });
 
-  it("replaces welcome chips with related questions after a reply", async () => {
+  it("drops related questions after a reply (LIQ-38)", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", mockChatOk());
 
@@ -93,8 +93,11 @@ describe("AiAssistant", () => {
     );
     await screen.findByText(/Income is up versus last quarter/i);
 
-    const related = screen.getByLabelText(/Related questions/i);
-    expect(within(related).getByRole("button", { name: /What drove the increase\?/i })).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Related questions/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /What drove the increase\?/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /How does this quarter compare to last\?/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("surfaces API failures as an alert", async () => {
