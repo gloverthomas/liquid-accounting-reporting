@@ -55,7 +55,7 @@ describe("AiAssistant", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it("sends a suggestion, renders reply, table, and calculation accordion stuck closed (LIQ-36)", async () => {
+  it("sends a suggestion, renders reply, table, and closed calculation accordion", async () => {
     const user = userEvent.setup();
     const fetchMock = mockChatOk();
     vi.stubGlobal("fetch", fetchMock);
@@ -70,10 +70,13 @@ describe("AiAssistant", () => {
 
     const accordion = screen.getByRole("button", { name: /How this was calculated/i });
     expect(accordion).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText(/via fixture/i)).not.toBeInTheDocument();
 
     await user.click(accordion);
-    expect(accordion).toHaveAttribute("aria-expanded", "false");
-    expect(screen.queryByText(/via fixture/i)).not.toBeInTheDocument();
+    expect(accordion).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText(/Compared June income/i)).toBeInTheDocument();
+    expect(screen.getByText(/via fixture/i)).toBeInTheDocument();
+
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/v1/assistant/chat",
       expect.objectContaining({ method: "POST" }),
