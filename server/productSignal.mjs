@@ -3,12 +3,18 @@ const PARITY_PROJECT_ID = "555e1574-8669-4119-94c5-f3584b2d9aaa";
 const TODO_STATE_ID = (process.env.LINEAR_TODO_STATE_ID ?? "84569319-0517-4fd2-b04f-81c02d0f7192").trim();
 
 export const ASSISTANT_CALC_ACCORDION_SEAM = "assistant-calculation-accordion";
+export const ASSISTANT_RELATED_QUESTIONS_SEAM = "assistant-related-questions";
 
 const SEAMS = {
   [ASSISTANT_CALC_ACCORDION_SEAM]: {
     title: '[Hero] Reporting AI Assistant: "How this was calculated" accordion does not expand',
     description:
       "Reporting AI Assistant chat works (LIQ-24). The **How this was calculated** disclosure under replies does not expand when clicked. Core behaves correctly.",
+  },
+  [ASSISTANT_RELATED_QUESTIONS_SEAM]: {
+    title: "Reporting AI Assistant: related questions failed to render",
+    description:
+      "After a reply, Reporting shows an error: **related questions failed to render**. The follow-up chips do not appear. Core still renders related questions from the assistant reply. Welcome chips still show on an empty thread. Send still works. Do not reopen the dead-send path.",
   },
 };
 
@@ -100,6 +106,7 @@ export async function handleProductSignal(payload) {
     source,
     reportingUrl,
     title: SEAMS[hash]?.title,
+    detail: SEAMS[hash]?.description,
   };
 
   const forwarded = await forwardWorkflow(body);

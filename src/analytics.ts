@@ -15,6 +15,7 @@ const allowedEvents = new Set([
   "bff_status",
   "assistant_message_sent",
   "assistant_calculation_accordion_stuck",
+  "assistant_related_questions_failed",
   "create_dialog_opened",
 ]);
 
@@ -129,7 +130,8 @@ export function captureProductEvent(
     | "bff_status"
     | "create_dialog_opened"
     | "assistant_message_sent"
-    | "assistant_calculation_accordion_stuck",
+    | "assistant_calculation_accordion_stuck"
+    | "assistant_related_questions_failed",
   properties?: Record<string, Property>,
 ): CaptureResult | undefined {
   return client?.capture(event, sanitiseProperties(properties));
