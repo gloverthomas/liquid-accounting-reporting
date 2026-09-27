@@ -216,6 +216,7 @@ export function AiAssistant({
   const titleId = useId();
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const scrollerRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const [messages, setMessages] = useState<AssistantMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
@@ -276,6 +277,8 @@ export function AiAssistant({
       setMessages((prev) => [...prev, userMsg]);
       setBusy(true);
 
+      abortControllerRef.current = new AbortController();
+
       try {
         const res = await fetch("/api/v1/assistant/chat", {
           method: "POST",
@@ -285,6 +288,7 @@ export function AiAssistant({
             context,
             history: messages.slice(-6).map((m) => ({ role: m.role, content: m.text })),
           }),
+          signal: abortControllerRef.current.signal,
         });
         const data = (await res.json()) as ChatResponse;
         if (!res.ok) {
@@ -314,10 +318,14 @@ export function AiAssistant({
         ]);
         onMessageOutcome?.("answered");
       } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") {
+          return;
+        }
         onMessageOutcome?.("failed");
         setError(err instanceof Error ? err.message : "assistant_failed");
       } finally {
         setBusy(false);
+        abortControllerRef.current = null;
       }
     },
     [busy, context, messages, onMessageOutcome],
@@ -348,8 +356,11 @@ export function AiAssistant({
             className="ai-icon-btn"
             aria-label="New chat"
             onClick={() => {
+              abortControllerRef.current?.abort();
+              abortControllerRef.current = null;
               setMessages([]);
               setError(null);
+              setBusy(false);
             }}
           >
             <Plus size={16} />
