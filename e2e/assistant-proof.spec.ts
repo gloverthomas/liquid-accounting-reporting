@@ -13,5 +13,7 @@ test("Reporting AI Assistant answers like Core (LIQ-24)", async ({ page }) => {
   await page.getByRole("button", { name: "How does this quarter compare to last?" }).click();
   await expect(page.getByText(/last quarter/i).first()).toBeVisible({ timeout: 15_000 });
   await expect(page.getByRole("alert")).toHaveCount(0);
-  await page.screenshot({ path: join(proofDir, "liq-24-reporting-assistant-answers.png") });
+  await page.getByRole("button", { name: /How this was calculated/i }).click();
+  await expect(page.getByText(/via /i)).toBeVisible();
+  await page.screenshot({ path: join(proofDir, "liq-37-reporting-assistant-calculation-accordion.png") });
 });
