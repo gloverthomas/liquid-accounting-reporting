@@ -1,7 +1,6 @@
 /*
-  This is the Reporting AI Assistant. History lists each saved chat. Open invoices asked for as a table do not draw. The reply says Answer failed to render as a table.
-  That posts the product signal once. A normal prose answer does not show that error and does not file. Opening the assistant does not file. Revenue by month draws as a chart and does not file. Pop out opens the same thread in a dialog and does not file.
-  Next: the browser posts the product signal for the table. This file does not create the Todo ticket.
+  This is the Reporting AI Assistant. History lists each saved chat. Open invoices asked for as a table draw in the reply like Core.
+  A normal prose answer does not file a product signal. Opening the assistant does not file. Revenue by month draws as a chart and does not file. Pop out opens the same thread in a dialog and does not file.
 */
 
 import { type ReactNode, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
@@ -21,7 +20,7 @@ import {
 } from "lucide-react";
 import liquidMark from "../assets/liquid-mark.png";
 import { chatTitle, loadChats, rememberChat, type StoredChat } from "../assistantHistory";
-import { reportAssistantAnswerTableFailed, reportAssistantRelatedQuestionsFailed } from "../productSignal";
+import { reportAssistantRelatedQuestionsFailed } from "../productSignal";
 
 export type AssistantTable = {
   headers: string[];
@@ -245,29 +244,36 @@ function CalculationAccordion({
 }
 
 /*
-  Shows the table failure instead of the invoice rows.
-  Runs only when the app sent structured rows for a table answer. This posts the product signal once. A normal prose answer does not mount this.
-  Next: the browser posts assistant-answer-table. This does not create the ticket.
-*/
-function FailedAnswerTable() {
-  useEffect(() => {
-    reportAssistantAnswerTableFailed(null);
-  }, []);
-  return (
-    <p className="ai-error" role="alert">
-      Answer failed to render as a table
-    </p>
-  );
-}
-
-/*
-  This should draw the open-invoice rows as a table in the reply.
-  The rows came from the app. On Reporting the table does not appear. The reply says Answer failed to render as a table, and that posts the product signal once.
-  A normal prose answer does not show this and does not file. Next: the browser posts the product signal. This does not create the ticket.
+  Draws the open-invoice rows as a table in the reply.
+  The rows come from the app when the question asks for open invoices in a table. This does not post a product signal.
 */
 function renderAnswerTable(message: AssistantMessage): ReactNode {
   if (message.answerKind !== "table" || !message.table?.rows.length) return null;
-  return <FailedAnswerTable />;
+  const table = message.table;
+  return (
+    <div className="ai-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            {table.headers.map((header, headerIndex) => (
+              <th key={`${message.id}-answer-h-${headerIndex}`} scope="col">
+                {header}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {table.rows.map((row, index) => (
+            <tr key={`${message.id}-answer-row-${index}`}>
+              {row.map((cell, cellIndex) => (
+                <td key={`${message.id}-answer-${index}-${cellIndex}`}>{cell}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
 /*

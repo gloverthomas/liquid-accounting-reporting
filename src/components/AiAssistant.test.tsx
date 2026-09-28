@@ -199,7 +199,7 @@ describe("AiAssistant", () => {
     expect(body.source).toBe("reporting:ai-assistant");
   });
 
-  it("shows the table error and files one product signal for open invoices", async () => {
+  it("renders open invoice rows as a table and does not signal", async () => {
     const user = userEvent.setup();
     const fetchMock = mockChatOk({
       reply: "These invoices are still open on the Liquid Coffee Co. demo books.",
@@ -213,19 +213,12 @@ describe("AiAssistant", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     render(<AiAssistant open onClose={() => undefined} />);
-    expect(fetchMock).not.toHaveBeenCalled();
-
     await user.type(screen.getByLabelText(/Ask the AI assistant/i), "Show my open invoices in a table{Enter}");
 
-    expect(await screen.findByText("Answer failed to render as a table")).toBeInTheDocument();
-    expect(screen.queryByRole("cell", { name: "INV-1042" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("columnheader", { name: "Invoice" })).not.toBeInTheDocument();
-
-    const signalCalls = fetchMock.mock.calls.filter((call) => call[0] === "/api/v1/product/signal");
-    expect(signalCalls).toHaveLength(1);
-    const body = JSON.parse(String((signalCalls[0][1] as RequestInit).body));
-    expect(body.hash).toBe("assistant-answer-table");
-    expect(body.source).toBe("reporting:ai-assistant");
+    expect(await screen.findByRole("cell", { name: "INV-1042" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Invoice" })).toBeInTheDocument();
+    expect(screen.queryByText("Answer failed to render as a table")).not.toBeInTheDocument();
+    expect(fetchMock.mock.calls.some((call) => call[0] === "/api/v1/product/signal")).toBe(false);
   });
 
   it("does not signal for a normal prose answer", async () => {
