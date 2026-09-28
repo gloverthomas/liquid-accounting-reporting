@@ -1,7 +1,7 @@
 /*
-  This is the Reporting AI Assistant. History does not list the saved chat. It says chat history failed to appear.
-  That posts the product signal once when History is open and a saved chat exists. An empty History, with no saved chat, does not file. Related questions that fail to render also post once, after Grok has replied and Send is idle. Welcome chips on an empty thread do not file. Send and New chat still work.
-  Next: the browser posts the product signal. This file does not create the Todo ticket.
+  This is the Reporting AI Assistant. History lists each saved chat. Open invoices asked for as a table do not draw. The reply says Answer failed to render as a table.
+  That posts the product signal once. A normal prose answer does not show that error and does not file. Opening the assistant does not file. Revenue by month draws as a chart and does not file. Pop out opens the same thread in a dialog and does not file.
+  Next: the browser posts the product signal for the table. This file does not create the Todo ticket.
 */
 
 import { type ReactNode, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
@@ -21,18 +21,26 @@ import {
 } from "lucide-react";
 import liquidMark from "../assets/liquid-mark.png";
 import { chatTitle, loadChats, rememberChat, type StoredChat } from "../assistantHistory";
-import { reportAssistantRelatedQuestionsFailed } from "../productSignal";
+import { reportAssistantAnswerTableFailed, reportAssistantRelatedQuestionsFailed } from "../productSignal";
 
 export type AssistantTable = {
   headers: string[];
   rows: string[][];
 };
 
+export type AssistantChart = {
+  points: { label: string; value: number }[];
+};
+
+export type AssistantAnswerKind = "table" | "chart";
+
 export type AssistantMessage = {
   id: string;
   role: "user" | "assistant";
   text: string;
+  answerKind?: AssistantAnswerKind | null;
   table?: AssistantTable | null;
+  chart?: AssistantChart | null;
   cta?: { label: string; href: string } | null;
   provider?: string;
   rationale?: string;
@@ -41,7 +49,9 @@ export type AssistantMessage = {
 
 type ChatResponse = {
   reply?: string;
+  answerKind?: AssistantAnswerKind | null;
   table?: AssistantTable | null;
+  chart?: AssistantChart | null;
   cta?: { label: string; href: string } | null;
   provider?: string;
   rationale?: string;
@@ -89,6 +99,27 @@ function normalizeTable(table: unknown): AssistantTable | null {
     headers: candidate.headers.map((h) => String(h)),
     rows: candidate.rows.map((row) => (Array.isArray(row) ? row.map((c) => String(c)) : [])),
   };
+}
+
+function normalizeAnswerKind(value: unknown): AssistantAnswerKind | null {
+  return value === "table" || value === "chart" ? value : null;
+}
+
+function normalizeChart(chart: unknown): AssistantChart | null {
+  if (!chart || typeof chart !== "object") return null;
+  const points = (chart as { points?: unknown }).points;
+  if (!Array.isArray(points)) return null;
+  const normalized = points
+    .map((point) => {
+      if (!point || typeof point !== "object") return null;
+      const label = String((point as { label?: unknown }).label ?? "").trim();
+      const value = Number((point as { value?: unknown }).value);
+      if (!label || !Number.isFinite(value)) return null;
+      return { label, value };
+    })
+    .filter((point): point is { label: string; value: number } => point !== null)
+    .slice(0, 12);
+  return normalized.length ? { points: normalized } : null;
 }
 
 const MAX_RELATED_CHARS = 500;
@@ -213,6 +244,70 @@ function CalculationAccordion({
   );
 }
 
+/*
+  Shows the table failure instead of the invoice rows.
+  Runs only when the app sent structured rows for a table answer. This posts the product signal once. A normal prose answer does not mount this.
+  Next: the browser posts assistant-answer-table. This does not create the ticket.
+*/
+function FailedAnswerTable() {
+  useEffect(() => {
+    reportAssistantAnswerTableFailed(null);
+  }, []);
+  return (
+    <p className="ai-error" role="alert">
+      Answer failed to render as a table
+    </p>
+  );
+}
+
+/*
+  This should draw the open-invoice rows as a table in the reply.
+  The rows came from the app. On Reporting the table does not appear. The reply says Answer failed to render as a table, and that posts the product signal once.
+  A normal prose answer does not show this and does not file. Next: the browser posts the product signal. This does not create the ticket.
+*/
+function renderAnswerTable(message: AssistantMessage): ReactNode {
+  if (message.answerKind !== "table" || !message.table?.rows.length) return null;
+  return <FailedAnswerTable />;
+}
+
+/*
+  Draws revenue by month as a simple bar chart in the reply.
+  The points come from the app. This does not post a product signal.
+  A later demo can fail this click on Reporting only. Next: the bars stay in the reply.
+*/
+function renderAnswerChart(message: AssistantMessage): ReactNode {
+  if (message.answerKind !== "chart" || !message.chart?.points.length) return null;
+  const points = message.chart.points;
+  const width = 280;
+  const height = 120;
+  const max = Math.max(...points.map((point) => point.value), 1);
+  const barWidth = 48;
+  const gap = 28;
+  return (
+    <figure className="ai-chart">
+      <svg role="img" aria-label="Revenue by month" viewBox={`0 0 ${width} ${height + 36}`} width="100%">
+        <title>Revenue by month</title>
+        {points.map((point, index) => {
+          const barHeight = Math.max(4, (point.value / max) * (height - 16));
+          const x = 20 + index * (barWidth + gap);
+          const y = height - barHeight;
+          return (
+            <g key={point.label}>
+              <rect x={x} y={y} width={barWidth} height={barHeight} rx="4" fill="#ff292e" />
+              <text x={x + barWidth / 2} y={height + 16} textAnchor="middle" fontSize="12" fill="#374151">
+                {point.label}
+              </text>
+              <text x={x + barWidth / 2} y={y - 4} textAnchor="middle" fontSize="10" fill="#6b7280">
+                {point.value.toLocaleString("en-AU")}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+    </figure>
+  );
+}
+
 function ChatHistoryPanel({
   chats,
   onOpen,
@@ -258,6 +353,7 @@ export function AiAssistant({
   const [context, setContext] = useState(contextLabel);
   const [error, setError] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [poppedOut, setPoppedOut] = useState(false);
   const [chats, setChats] = useState<StoredChat[]>(() => loadChats());
 
   useEffect(() => {
@@ -284,16 +380,30 @@ export function AiAssistant({
   useEffect(() => {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key !== "Escape") return;
+      if (poppedOut) {
+        setPoppedOut(false);
+        return;
+      }
+      onClose();
     };
     window.addEventListener("keydown", onKey);
     queueMicrotask(() => inputRef.current?.focus());
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [open, onClose, poppedOut]);
 
   useEffect(() => {
     scrollerRef.current?.scrollTo({ top: scrollerRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, busy, error]);
+
+  /*
+    Expands the current assistant thread into an in-page dialog. Closing it returns to the docked assistant. The thread is the same one.
+    This does not post a product signal. Opening the assistant does not file.
+    A later demo can fail this click on Reporting only. Next: the dialog stays on this page. It does not open a new window.
+  */
+  const togglePopOut = useCallback(() => {
+    setPoppedOut((value) => !value);
+  }, []);
 
   const footerChips = useMemo(() => {
     if (messages.length === 0) {
@@ -360,7 +470,9 @@ export function AiAssistant({
             id: newId(),
             role: "assistant",
             text: data.reply ?? "I could not generate a reply.",
+            answerKind: normalizeAnswerKind(data.answerKind),
             table: normalizeTable(data.table),
+            chart: normalizeChart(data.chart),
             cta: data.cta
               ? (() => {
                   const href = safeCtaHref(data.cta?.href);
@@ -396,9 +508,14 @@ export function AiAssistant({
   const empty = messages.length === 0;
 
   return (
+    <>
+    {poppedOut ? (
+      <button type="button" className="ai-popout-backdrop" aria-label="Close pop out" onClick={() => setPoppedOut(false)} />
+    ) : null}
     <aside
-      className="ai-assistant"
-      role="complementary"
+      className={`ai-assistant${poppedOut ? " is-popped" : ""}`}
+      role={poppedOut ? "dialog" : "complementary"}
+      aria-modal={poppedOut ? true : undefined}
       aria-labelledby={titleId}
     >
       <header className="ai-assistant-header">
@@ -433,7 +550,13 @@ export function AiAssistant({
           >
             <Plus size={16} />
           </button>
-          <button type="button" className="ai-icon-btn" aria-label="Pop out" disabled>
+          <button
+            type="button"
+            className="ai-icon-btn"
+            aria-label="Pop out"
+            aria-pressed={poppedOut}
+            onClick={togglePopOut}
+          >
             <ExternalLink size={16} />
           </button>
           <button type="button" className="ai-icon-btn" aria-label="Close assistant" onClick={onClose}>
@@ -478,7 +601,9 @@ export function AiAssistant({
                 ) : (
                   <div className="ai-bubble-assistant">
                     <AssistantMarkdown text={message.text} />
-                    {message.table ? (
+                    {message.answerKind === "table" ? renderAnswerTable(message) : null}
+                    {message.answerKind === "chart" ? renderAnswerChart(message) : null}
+                    {message.answerKind !== "table" && message.table ? (
                       <div className="ai-table-wrap">
                         <table>
                           <thead>
@@ -603,5 +728,6 @@ export function AiAssistant({
         <p className="ai-disclaimer">All responses may be inaccurate. Verify important information.</p>
       </footer>
     </aside>
+    </>
   );
 }
