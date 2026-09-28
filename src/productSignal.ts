@@ -1,6 +1,6 @@
 /*
   This file posts a product signal from the browser. The POST to /api/v1/product/signal is the product signal. It does not create the Linear ticket.
-  Each hash posts once per page load. A later call in that load still notes PostHog and Sentry, and does not POST again. assistant-chat-history runs when chat history failed to appear. assistant-related-questions runs when related questions failed to render. assistant-calculation-accordion is defined here, and nothing in this checkout calls it.
+  Each hash posts once per page load. A later call in that load still notes PostHog and Sentry, and does not POST again. assistant-related-questions runs when related questions failed to render. assistant-calculation-accordion is defined here, and nothing in this checkout calls it.
   Next: the Reporting server forwards the hash to the workflow. The workflow opens a Todo ticket.
 */
 
@@ -9,17 +9,14 @@ import { Sentry } from "./sentry";
 
 export const ASSISTANT_CALC_ACCORDION_SEAM = "assistant-calculation-accordion";
 export const ASSISTANT_RELATED_QUESTIONS_SEAM = "assistant-related-questions";
-export const ASSISTANT_CHAT_HISTORY_SEAM = "assistant-chat-history";
 
 let accordionSignalSent = false;
 let relatedQuestionsSignalSent = false;
-let chatHistorySignalSent = false;
 
 /** Test-only. The page files each seam once per load. */
 export function resetProductSignalsForTests(): void {
   accordionSignalSent = false;
   relatedQuestionsSignalSent = false;
-  chatHistorySignalSent = false;
 }
 
 /* Hash assistant-calculation-accordion. Posts the product signal once per page load. Does not create the ticket. */
@@ -68,33 +65,6 @@ export function reportAssistantRelatedQuestionsFailed(posthog: PostHogLike | nul
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
       hash: ASSISTANT_RELATED_QUESTIONS_SEAM,
-      source: "reporting:ai-assistant",
-      reportingUrl: window.location.href,
-    }),
-  }).catch(() => {
-    /* non-fatal — observability + Linear triage are best-effort from the browser */
-  });
-}
-
-/* Hash assistant-chat-history. Posts the product signal once per page load. Does not create the ticket. */
-export function reportAssistantChatHistoryFailed(posthog: PostHogLike | null): void {
-  captureProductEvent(posthog, "assistant_chat_history_failed", {
-    source: "reporting",
-  });
-
-  Sentry.captureMessage("AI Assistant chat history failed to appear", {
-    level: "warning",
-    tags: { app: "reporting", kind: "assistant-ui", seam: ASSISTANT_CHAT_HISTORY_SEAM },
-  });
-
-  if (chatHistorySignalSent) return;
-  chatHistorySignalSent = true;
-
-  void fetch("/api/v1/product/signal", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      hash: ASSISTANT_CHAT_HISTORY_SEAM,
       source: "reporting:ai-assistant",
       reportingUrl: window.location.href,
     }),

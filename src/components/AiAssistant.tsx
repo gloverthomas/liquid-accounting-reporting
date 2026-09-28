@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import liquidMark from "../assets/liquid-mark.png";
 import { chatTitle, loadChats, rememberChat, type StoredChat } from "../assistantHistory";
-import { reportAssistantChatHistoryFailed, reportAssistantRelatedQuestionsFailed } from "../productSignal";
+import { reportAssistantRelatedQuestionsFailed } from "../productSignal";
 
 export type AssistantTable = {
   headers: string[];
@@ -213,16 +213,28 @@ function CalculationAccordion({
   );
 }
 
-function ChatHistoryPanel({ missing }: { missing: boolean }) {
+function ChatHistoryPanel({
+  chats,
+  onOpen,
+}: {
+  chats: StoredChat[];
+  onOpen: (chat: StoredChat) => void;
+}) {
   return (
     <div className="ai-history">
       <h3>Chat history</h3>
-      {missing ? (
-        <p className="ai-error" role="alert">
-          Chat history failed to appear.
-        </p>
-      ) : (
+      {chats.length === 0 ? (
         <p className="ai-history-empty">No chats yet. Send a question, then open History.</p>
+      ) : (
+        <ul className="ai-history-list" aria-label="Chat history">
+          {chats.map((chat) => (
+            <li key={chat.id}>
+              <button type="button" onClick={() => onOpen(chat)}>
+                {chat.title}
+              </button>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );
@@ -313,18 +325,6 @@ export function AiAssistant({
     if (!relatedQuestionsFailed) return;
     reportAssistantRelatedQuestionsFailed(null);
   }, [relatedQuestionsFailed]);
-
-  const historyMissing = historyOpen && chats.some((chat) => chat.messages.length > 0);
-
-  /*
-    Chat history failed to appear: History is open and a saved chat exists, but the panel does not list it.
-    That posts the product signal once. An empty History, with no saved chat, does not file.
-    Send and New chat still work.
-  */
-  useEffect(() => {
-    if (!historyMissing) return;
-    reportAssistantChatHistoryFailed(null);
-  }, [historyMissing]);
 
   const send = useCallback(
     async (text: string) => {
@@ -444,7 +444,25 @@ export function AiAssistant({
 
       <div className="ai-assistant-body" ref={scrollerRef}>
         {historyOpen ? (
-          <ChatHistoryPanel missing={historyMissing} />
+          <ChatHistoryPanel
+            chats={chats}
+            onOpen={(chat) => {
+              abortControllerRef.current?.abort();
+              abortControllerRef.current = null;
+              conversationId.current = chat.id;
+              setMessages(
+                chat.messages.map((message) => ({
+                  id: message.id,
+                  role: message.role,
+                  text: message.text,
+                  relatedQuestions: message.relatedQuestions,
+                })),
+              );
+              setError(null);
+              setBusy(false);
+              setHistoryOpen(false);
+            }}
+          />
         ) : empty ? (
           <div className="ai-assistant-welcome">
             <img className="ai-welcome-mark" src={liquidMark} alt="" width={40} height={40} />
