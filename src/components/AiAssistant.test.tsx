@@ -26,6 +26,7 @@ function mockChatOk(overrides: Record<string, unknown> = {}) {
 
 describe("AiAssistant", () => {
   beforeEach(() => {
+    localStorage.clear();
     resetProductSignalsForTests();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
@@ -120,6 +121,52 @@ describe("AiAssistant", () => {
     await user.click(screen.getByRole("button", { name: /New chat/i }));
     expect(screen.getByRole("heading", { name: /Hello Jordan/i })).toBeInTheDocument();
     expect(screen.queryByText(/Income is up versus last quarter/i)).not.toBeInTheDocument();
+  });
+
+  it("does not file a signal when History is empty", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<AiAssistant open onClose={() => undefined} />);
+    await user.click(screen.getByRole("button", { name: "History" }));
+
+    expect(screen.getByText(/No chats yet/i)).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("hides a saved chat and files one product signal", async () => {
+    const user = userEvent.setup();
+    const fetchMock = mockChatOk();
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<AiAssistant open onClose={() => undefined} />);
+    await user.click(
+      screen.getByRole("button", { name: /How does this quarter compare to last\?/i }),
+    );
+    await screen.findByText(/Income is up versus last quarter/i);
+
+    const history = screen.getByRole("button", { name: "History" });
+    await user.click(history);
+
+    expect(screen.getByRole("alert")).toHaveTextContent(/Chat history failed to appear/i);
+    expect(screen.queryByRole("list", { name: "Chat history" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /How does this quarter compare to last\?/i }),
+    ).not.toBeInTheDocument();
+
+    const signalCalls = () =>
+      fetchMock.mock.calls.filter((call) => call[0] === "/api/v1/product/signal");
+    await vi.waitFor(() => expect(signalCalls()).toHaveLength(1));
+
+    await user.click(history);
+    await user.click(history);
+    expect(signalCalls()).toHaveLength(1);
+
+    const body = JSON.parse(String((signalCalls()[0][1] as RequestInit).body));
+    expect(body.hash).toBe("assistant-chat-history");
+    expect(body.source).toBe("reporting:ai-assistant");
   });
 
   it("shows a render error and files a product signal when related questions fail", async () => {

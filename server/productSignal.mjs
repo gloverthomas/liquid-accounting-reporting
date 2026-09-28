@@ -4,6 +4,7 @@ const TODO_STATE_ID = (process.env.LINEAR_TODO_STATE_ID ?? "84569319-0517-4fd2-b
 
 export const ASSISTANT_CALC_ACCORDION_SEAM = "assistant-calculation-accordion";
 export const ASSISTANT_RELATED_QUESTIONS_SEAM = "assistant-related-questions";
+export const ASSISTANT_CHAT_HISTORY_SEAM = "assistant-chat-history";
 
 const SEAMS = {
   [ASSISTANT_CALC_ACCORDION_SEAM]: {
@@ -15,6 +16,11 @@ const SEAMS = {
     title: "Reporting AI Assistant: related questions failed to render",
     description:
       "After a reply, Reporting shows an error: **related questions failed to render**. The follow-up chips do not appear. Core still renders related questions from the assistant reply. Welcome chips still show on an empty thread. Send still works. Do not reopen the dead-send path.",
+  },
+  [ASSISTANT_CHAT_HISTORY_SEAM]: {
+    title: "Reporting AI Assistant: chat history does not appear",
+    description:
+      "After a reply, History opens and says chat history failed to appear. The saved chat is not listed. Core lists it. Send and New chat still work. An empty History, with no saved chat, does not file.",
   },
 };
 
