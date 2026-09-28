@@ -447,7 +447,8 @@ export function AiAssistant({
           <ChatHistoryPanel
             chats={chats}
             onOpen={(chat) => {
-              const isDifferentConversation = conversationId.current !== chat.id;
+              abortControllerRef.current?.abort();
+              abortControllerRef.current = null;
               conversationId.current = chat.id;
               setMessages(
                 chat.messages.map((message) => ({
@@ -458,9 +459,7 @@ export function AiAssistant({
                 })),
               );
               setError(null);
-              if (isDifferentConversation) {
-                setBusy(false);
-              }
+              setBusy(false);
               setHistoryOpen(false);
             }}
           />
