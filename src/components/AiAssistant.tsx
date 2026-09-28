@@ -14,7 +14,8 @@ import {
   X,
 } from "lucide-react";
 import liquidMark from "../assets/liquid-mark.png";
-import { reportAssistantRelatedQuestionsFailed } from "../productSignal";
+import { chatTitle, loadChats, rememberChat, type StoredChat } from "../assistantHistory";
+import { reportAssistantChatHistoryFailed, reportAssistantRelatedQuestionsFailed } from "../productSignal";
 
 export type AssistantTable = {
   headers: string[];
@@ -206,6 +207,21 @@ function CalculationAccordion({
   );
 }
 
+function ChatHistoryPanel({ missing }: { missing: boolean }) {
+  return (
+    <div className="ai-history">
+      <h3>Chat history</h3>
+      {missing ? (
+        <p className="ai-error" role="alert">
+          Chat history failed to appear.
+        </p>
+      ) : (
+        <p className="ai-history-empty">No chats yet. Send a question, then open History.</p>
+      )}
+    </div>
+  );
+}
+
 export function AiAssistant({
   open,
   onClose,
@@ -217,15 +233,35 @@ export function AiAssistant({
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const conversationId = useRef(newId());
   const [messages, setMessages] = useState<AssistantMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [context, setContext] = useState(contextLabel);
   const [error, setError] = useState<string | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [chats, setChats] = useState<StoredChat[]>(() => loadChats());
 
   useEffect(() => {
     setContext(contextLabel);
   }, [contextLabel]);
+
+  useEffect(() => {
+    if (!messages.some((message) => message.role === "user")) return;
+    setChats(
+      rememberChat({
+        id: conversationId.current,
+        title: chatTitle(messages),
+        updatedAt: Date.now(),
+        messages: messages.map((message) => ({
+          id: message.id,
+          role: message.role,
+          text: message.text,
+          relatedQuestions: message.relatedQuestions,
+        })),
+      }),
+    );
+  }, [messages]);
 
   useEffect(() => {
     if (!open) return;
@@ -262,15 +298,33 @@ export function AiAssistant({
     footerChips.mode === "related" &&
     footerChips.questions.length === 0;
 
+  /*
+    Related questions failed to render: Grok has replied, Send is idle, and there are no follow-up chips.
+    That posts the product signal once. Send and New chat still work.
+    Welcome chips on an empty thread do not file. An empty state does not file.
+  */
   useEffect(() => {
     if (!relatedQuestionsFailed) return;
     reportAssistantRelatedQuestionsFailed(null);
   }, [relatedQuestionsFailed]);
 
+  const historyMissing = historyOpen && chats.some((chat) => chat.messages.length > 0);
+
+  /*
+    Chat history failed to appear: History is open and a saved chat exists, but the panel does not list it.
+    That posts the product signal once. An empty History, with no saved chat, does not file.
+    Send and New chat still work.
+  */
+  useEffect(() => {
+    if (!historyMissing) return;
+    reportAssistantChatHistoryFailed(null);
+  }, [historyMissing]);
+
   const send = useCallback(
     async (text: string) => {
       const trimmed = text.trim();
       if (!trimmed || busy) return;
+      setHistoryOpen(false);
       setError(null);
       setDraft("");
       const userMsg: AssistantMessage = { id: newId(), role: "user", text: trimmed };
@@ -348,7 +402,13 @@ export function AiAssistant({
           <span className="ai-assistant-beta">Beta</span>
         </div>
         <div className="ai-assistant-header-actions">
-          <button type="button" className="ai-icon-btn" aria-label="History" disabled>
+          <button
+            type="button"
+            className="ai-icon-btn"
+            aria-label="History"
+            aria-pressed={historyOpen}
+            onClick={() => setHistoryOpen((value) => !value)}
+          >
             <Clock3 size={16} />
           </button>
           <button
@@ -358,9 +418,11 @@ export function AiAssistant({
             onClick={() => {
               abortControllerRef.current?.abort();
               abortControllerRef.current = null;
+              conversationId.current = newId();
               setMessages([]);
               setError(null);
               setBusy(false);
+              setHistoryOpen(false);
             }}
           >
             <Plus size={16} />
@@ -375,7 +437,9 @@ export function AiAssistant({
       </header>
 
       <div className="ai-assistant-body" ref={scrollerRef}>
-        {empty ? (
+        {historyOpen ? (
+          <ChatHistoryPanel missing={historyMissing} />
+        ) : empty ? (
           <div className="ai-assistant-welcome">
             <img className="ai-welcome-mark" src={liquidMark} alt="" width={40} height={40} />
             <h3>Hello {userName}!</h3>
