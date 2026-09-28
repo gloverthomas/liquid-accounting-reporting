@@ -1,6 +1,16 @@
 import { captureProductEvent, type PostHogLike } from "./analytics";
 import { Sentry } from "./sentry";
 
+/*
+  Browser post for a product signal. The POST /api/v1/product/signal is the product signal.
+  It does not create the Linear ticket by itself. Next: the Reporting server forwards the hash to the workflow /signal.
+  The POST runs once per page load. A later call in that load still notes PostHog and Sentry, and does not POST again.
+
+  assistant-calculation-accordion — How this was calculated did not expand. Nothing in this checkout calls that function.
+  assistant-related-questions — related questions failed to render. The assistant calls this.
+  assistant-chat-history — chat history failed to appear. The assistant calls this.
+*/
+
 export const ASSISTANT_CALC_ACCORDION_SEAM = "assistant-calculation-accordion";
 export const ASSISTANT_RELATED_QUESTIONS_SEAM = "assistant-related-questions";
 export const ASSISTANT_CHAT_HISTORY_SEAM = "assistant-chat-history";
@@ -16,6 +26,7 @@ export function resetProductSignalsForTests(): void {
   chatHistorySignalSent = false;
 }
 
+/* Hash assistant-calculation-accordion. Posts the product signal once per page load. Does not create the ticket. */
 export function reportAssistantCalculationAccordionStuck(posthog: PostHogLike | null): void {
   captureProductEvent(posthog, "assistant_calculation_accordion_stuck", {
     source: "reporting",
@@ -42,6 +53,7 @@ export function reportAssistantCalculationAccordionStuck(posthog: PostHogLike | 
   });
 }
 
+/* Hash assistant-related-questions. Posts the product signal once per page load. Does not create the ticket. */
 export function reportAssistantRelatedQuestionsFailed(posthog: PostHogLike | null): void {
   captureProductEvent(posthog, "assistant_related_questions_failed", {
     source: "reporting",
@@ -68,6 +80,7 @@ export function reportAssistantRelatedQuestionsFailed(posthog: PostHogLike | nul
   });
 }
 
+/* Hash assistant-chat-history. Posts the product signal once per page load. Does not create the ticket. */
 export function reportAssistantChatHistoryFailed(posthog: PostHogLike | null): void {
   captureProductEvent(posthog, "assistant_chat_history_failed", {
     source: "reporting",

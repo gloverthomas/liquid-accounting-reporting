@@ -6,6 +6,11 @@ export const ASSISTANT_CALC_ACCORDION_SEAM = "assistant-calculation-accordion";
 export const ASSISTANT_RELATED_QUESTIONS_SEAM = "assistant-related-questions";
 export const ASSISTANT_CHAT_HISTORY_SEAM = "assistant-chat-history";
 
+/*
+  The hash picks the title and the bug writeup. Those two are forwarded to the workflow /signal.
+  Direct Linear create is the fallback, and only for a known hash, and only when that forward did not return a ticket.
+  An unknown hash does not create a ticket. This file does not start the plan. The ticket it creates stays in Todo.
+*/
 const SEAMS = {
   [ASSISTANT_CALC_ACCORDION_SEAM]: {
     title: '[Hero] Reporting AI Assistant: "How this was calculated" accordion does not expand',
@@ -99,9 +104,13 @@ async function forwardWorkflow(body) {
   }
 }
 
-/**
- * Product signal triage: workflow /signal first, else direct Linear create (demo fallback).
- */
+/*
+  Handles the browser product signal.
+  Forwards the hash, title, and bug writeup to the workflow /signal first.
+  If that forward returns a ticket, this stops. It does not also create a Linear ticket.
+  If the forward fails, direct Linear create runs only for a known hash and only when a Linear key is set.
+  Next for a created ticket: it sits in Todo until a person moves it to In Progress.
+*/
 export async function handleProductSignal(payload) {
   const hash = typeof payload.hash === "string" ? payload.hash.trim() : "";
   const source = typeof payload.source === "string" ? payload.source : "reporting";

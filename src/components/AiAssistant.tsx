@@ -298,6 +298,11 @@ export function AiAssistant({
     footerChips.mode === "related" &&
     footerChips.questions.length === 0;
 
+  /*
+    Related questions failed to render: Grok has replied, Send is idle, and there are no follow-up chips.
+    That posts the product signal once. Send and New chat still work.
+    Welcome chips on an empty thread do not file. An empty state does not file.
+  */
   useEffect(() => {
     if (!relatedQuestionsFailed) return;
     reportAssistantRelatedQuestionsFailed(null);
@@ -305,6 +310,11 @@ export function AiAssistant({
 
   const historyMissing = historyOpen && chats.some((chat) => chat.messages.length > 0);
 
+  /*
+    Chat history failed to appear: History is open and a saved chat exists, but the panel does not list it.
+    That posts the product signal once. An empty History, with no saved chat, does not file.
+    Send and New chat still work.
+  */
   useEffect(() => {
     if (!historyMissing) return;
     reportAssistantChatHistoryFailed(null);
