@@ -5,6 +5,20 @@ import { answerAssistant } from "./assistant.mjs";
 afterEach(() => vi.unstubAllGlobals());
 
 describe("Reporting assistant endpoint (LIQ-24)", () => {
+  it("returns open-invoice rows and revenue points from the app, without calling Grok", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const table = await answerAssistant({ message: "Show my open invoices in a table" }, { apiKey: "xai-test" });
+    expect(table.status).toBe(200);
+    expect(table.payload.answerKind).toBe("table");
+    expect(table.payload.table.rows[0][0]).toBe("INV-1042");
+    expect(table.payload.reply).not.toMatch(/\|/);
+    const chart = await answerAssistant({ message: "Show revenue by month as a chart" }, { apiKey: "xai-test" });
+    expect(chart.payload.answerKind).toBe("chart");
+    expect(chart.payload.chart.points).toHaveLength(3);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("answers from demo fixtures without an xAI key", async () => {
     const { status, payload } = await answerAssistant({ message: "How does this quarter compare to last?" });
     expect(status).toBe(200);

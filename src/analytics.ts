@@ -16,6 +16,7 @@ const allowedEvents = new Set([
   "assistant_message_sent",
   "assistant_calculation_accordion_stuck",
   "assistant_related_questions_failed",
+  "assistant_answer_table_failed",
   "create_dialog_opened",
 ]);
 
@@ -131,7 +132,8 @@ export function captureProductEvent(
     | "create_dialog_opened"
     | "assistant_message_sent"
     | "assistant_calculation_accordion_stuck"
-    | "assistant_related_questions_failed",
+    | "assistant_related_questions_failed"
+    | "assistant_answer_table_failed",
   properties?: Record<string, Property>,
 ): CaptureResult | undefined {
   return client?.capture(event, sanitiseProperties(properties));

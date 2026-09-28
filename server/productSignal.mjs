@@ -11,6 +11,7 @@ const TODO_STATE_ID = (process.env.LINEAR_TODO_STATE_ID ?? "84569319-0517-4fd2-b
 export const ASSISTANT_CALC_ACCORDION_SEAM = "assistant-calculation-accordion";
 export const ASSISTANT_RELATED_QUESTIONS_SEAM = "assistant-related-questions";
 export const ASSISTANT_CHAT_HISTORY_SEAM = "assistant-chat-history";
+export const ASSISTANT_ANSWER_TABLE_SEAM = "assistant-answer-table";
 
 /*
   The hash picks the title and the bug writeup. Those two are forwarded to the workflow /signal.
@@ -32,6 +33,11 @@ const SEAMS = {
     title: "Reporting AI Assistant: chat history does not appear",
     description:
       "After a reply, History opens and says chat history failed to appear. The saved chat is not listed. Core lists it. Send and New chat still work. An empty History, with no saved chat, does not file.",
+  },
+  [ASSISTANT_ANSWER_TABLE_SEAM]: {
+    title: "Reporting AI Assistant: answer failed to render as a table",
+    description:
+      "The question “Show my open invoices in a table” returns structured rows from the app. Reporting does not draw the table. It says answer failed to render as a table. Core draws the rows. A normal prose answer does not show this error. Revenue by month still draws as a chart. Pop out still opens the same thread.",
   },
 };
 
