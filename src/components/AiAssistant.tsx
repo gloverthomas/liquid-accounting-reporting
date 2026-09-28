@@ -1,3 +1,9 @@
+/*
+  This is the Reporting AI Assistant. History does not list the saved chat. It says chat history failed to appear.
+  That posts the product signal once when History is open and a saved chat exists. An empty History, with no saved chat, does not file. Related questions that fail to render also post once, after Grok has replied and Send is idle. Welcome chips on an empty thread do not file. Send and New chat still work.
+  Next: the browser posts the product signal. This file does not create the Todo ticket.
+*/
+
 import { type ReactNode, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,

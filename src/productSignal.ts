@@ -1,15 +1,11 @@
+/*
+  This file posts a product signal from the browser. The POST to /api/v1/product/signal is the product signal. It does not create the Linear ticket.
+  Each hash posts once per page load. A later call in that load still notes PostHog and Sentry, and does not POST again. assistant-chat-history runs when chat history failed to appear. assistant-related-questions runs when related questions failed to render. assistant-calculation-accordion is defined here, and nothing in this checkout calls it.
+  Next: the Reporting server forwards the hash to the workflow. The workflow opens a Todo ticket.
+*/
+
 import { captureProductEvent, type PostHogLike } from "./analytics";
 import { Sentry } from "./sentry";
-
-/*
-  Browser post for a product signal. The POST /api/v1/product/signal is the product signal.
-  It does not create the Linear ticket by itself. Next: the Reporting server forwards the hash to the workflow /signal.
-  The POST runs once per page load. A later call in that load still notes PostHog and Sentry, and does not POST again.
-
-  assistant-calculation-accordion — How this was calculated did not expand. Nothing in this checkout calls that function.
-  assistant-related-questions — related questions failed to render. The assistant calls this.
-  assistant-chat-history — chat history failed to appear. The assistant calls this.
-*/
 
 export const ASSISTANT_CALC_ACCORDION_SEAM = "assistant-calculation-accordion";
 export const ASSISTANT_RELATED_QUESTIONS_SEAM = "assistant-related-questions";

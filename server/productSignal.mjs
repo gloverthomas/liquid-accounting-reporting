@@ -1,3 +1,9 @@
+/*
+  This file receives the browser product signal and forwards the hash, title, and bug writeup to the workflow.
+  A known hash is forwarded first. If that forward returns a ticket, this stops and does not also create a Linear ticket. If the forward fails, a direct Linear create runs only for a known hash and only when a Linear key is set. An unknown hash does not create a ticket. This file does not start the plan.
+  Next: the ticket sits in Todo until a person moves it to In Progress.
+*/
+
 const LIQ_TEAM_ID = "5389dda4-1725-4096-9ecb-a24a378b28c6";
 const PARITY_PROJECT_ID = "555e1574-8669-4119-94c5-f3584b2d9aaa";
 const TODO_STATE_ID = (process.env.LINEAR_TODO_STATE_ID ?? "84569319-0517-4fd2-b04f-81c02d0f7192").trim();
