@@ -16,18 +16,8 @@ const fixtureReply = {
   ],
 };
 
-test("Reporting History hides a saved chat and posts the product signal", async ({ page }) => {
+test("Reporting AI Assistant lists a saved chat and restores the reply", async ({ page }) => {
   mkdirSync(proofDir, { recursive: true });
-  const signals: Array<{ hash?: string }> = [];
-
-  await page.route(/\/api\/v1\/product\/signal$/, async (route) => {
-    signals.push(JSON.parse(route.request().postData() ?? "{}") as { hash?: string });
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ ok: true }),
-    });
-  });
 
   await page.route(/\/api\/v1\/assistant\/chat$/, async (route) => {
     if (route.request().method() !== "POST") {
@@ -45,25 +35,28 @@ test("Reporting History hides a saved chat and posts the product signal", async 
   await page.getByRole("button", { name: /AI Assistant/i }).click();
   await expect(page.getByRole("heading", { name: "AI Assistant" })).toBeVisible();
 
-  await page.getByRole("button", { name: "History" }).click();
-  await expect(page.getByText(/No chats yet/i)).toBeVisible();
-  expect(signals).toHaveLength(0);
-
   await page.getByRole("button", { name: "How does this quarter compare to last?" }).click();
   await expect(page.getByText(/Income is up versus last quarter/i).first()).toBeVisible({
     timeout: 15_000,
   });
-  expect(signals).toHaveLength(0);
 
   await page.getByRole("button", { name: "History" }).click();
-  await expect(page.getByRole("alert")).toHaveText(/Chat history failed to appear/i);
-  await expect(page.getByRole("list", { name: "Chat history" })).toHaveCount(0);
-  await expect
-    .poll(() => signals.map((body) => body.hash))
-    .toEqual(["assistant-chat-history"]);
+  const history = page.getByRole("list", { name: "Chat history" });
+  await expect(
+    history.getByRole("button", { name: "How does this quarter compare to last?" }),
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: "New chat" }).click();
+  await expect(page.getByRole("heading", { name: /Hello/i })).toBeVisible();
+  await expect(page.getByText(/Income is up versus last quarter/i)).toHaveCount(0);
+
+  await page.getByRole("button", { name: "History" }).click();
+  await history.getByRole("button", { name: "How does this quarter compare to last?" }).click();
+  await expect(page.getByText(/Income is up versus last quarter/i).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "What's driving the income increase?" })).toBeVisible();
 
   await page.screenshot({
-    path: join(proofDir, "chat-history-reporting-failed.png"),
+    path: join(proofDir, "liq-41-reporting-chat-history.png"),
     fullPage: false,
   });
 });

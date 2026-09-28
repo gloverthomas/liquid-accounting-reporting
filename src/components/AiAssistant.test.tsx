@@ -136,37 +136,42 @@ describe("AiAssistant", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("hides a saved chat and files one product signal", async () => {
+  it("lists a saved chat in History and restores the reply", async () => {
     const user = userEvent.setup();
-    const fetchMock = mockChatOk();
-    vi.stubGlobal("fetch", fetchMock);
+    vi.stubGlobal("fetch", mockChatOk());
 
     render(<AiAssistant open onClose={() => undefined} />);
+    await user.click(screen.getByRole("button", { name: "History" }));
+    expect(screen.getByText(/No chats yet/i)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "History" }));
+
     await user.click(
       screen.getByRole("button", { name: /How does this quarter compare to last\?/i }),
     );
-    await screen.findByText(/Income is up versus last quarter/i);
+    expect(await screen.findByText(/Income is up versus last quarter/i)).toBeInTheDocument();
 
-    const history = screen.getByRole("button", { name: "History" });
-    await user.click(history);
-
-    expect(screen.getByRole("alert")).toHaveTextContent(/Chat history failed to appear/i);
-    expect(screen.queryByRole("list", { name: "Chat history" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "History" }));
+    const list = screen.getByRole("list", { name: "Chat history" });
     expect(
-      screen.queryByRole("button", { name: /How does this quarter compare to last\?/i }),
-    ).not.toBeInTheDocument();
+      within(list).getByRole("button", { name: /How does this quarter compare to last\?/i }),
+    ).toBeInTheDocument();
 
-    const signalCalls = () =>
-      fetchMock.mock.calls.filter((call) => call[0] === "/api/v1/product/signal");
-    await vi.waitFor(() => expect(signalCalls()).toHaveLength(1));
+    await user.click(screen.getByRole("button", { name: "New chat" }));
+    expect(screen.getByRole("heading", { name: /Hello Jordan/i })).toBeInTheDocument();
+    expect(screen.queryByText(/Income is up versus last quarter/i)).not.toBeInTheDocument();
 
-    await user.click(history);
-    await user.click(history);
-    expect(signalCalls()).toHaveLength(1);
+    await user.click(screen.getByRole("button", { name: "History" }));
+    const saved = screen.getByRole("list", { name: "Chat history" });
+    await user.click(
+      within(saved).getByRole("button", { name: /How does this quarter compare to last\?/i }),
+    );
 
-    const body = JSON.parse(String((signalCalls()[0][1] as RequestInit).body));
-    expect(body.hash).toBe("assistant-chat-history");
-    expect(body.source).toBe("reporting:ai-assistant");
+    expect(screen.getByText(/Income is up versus last quarter/i)).toBeInTheDocument();
+    expect(
+      within(screen.getByLabelText(/Related questions/i)).getByRole("button", {
+        name: /What drove the increase\?/i,
+      }),
+    ).toBeInTheDocument();
   });
 
   it("shows a render error and files a product signal when related questions fail", async () => {
